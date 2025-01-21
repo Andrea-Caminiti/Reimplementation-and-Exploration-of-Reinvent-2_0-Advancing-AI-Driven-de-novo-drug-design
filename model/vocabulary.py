@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from typing import Dict
+from collections.abc import Mapping
 import re
 
 class TokenAlreadyInVocabError(Exception):
@@ -14,7 +14,7 @@ class Vocabulary:
     Data structure for token storage and conversion
     '''
 
-    def __init__(self, tokens: Dict = None, starting_id: int = 0):
+    def __init__(self, tokens: Mapping = None, starting_id: int = 0):
         '''
         Params: 
         :param tokens: (optional) (dict) Dictionary of token, id pairs
@@ -45,7 +45,7 @@ class Vocabulary:
             self.idToTokens[id] = token
             
         
-    def update(self, tokens: Dict):
+    def update(self, tokens: Mapping):
         '''
         Method to add multiple tokens at once
         Params: 
