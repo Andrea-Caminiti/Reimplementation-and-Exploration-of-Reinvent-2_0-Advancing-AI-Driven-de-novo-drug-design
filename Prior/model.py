@@ -6,7 +6,7 @@ import torch.nn.functional as fnn
 from collections.abc import Mapping
 from typing import List, Tuple
 
-import vocabulary as vc
+import Vocabulary.vocabulary as vc
 
 class RNN(nn.Module):
     '''
@@ -137,7 +137,7 @@ class Prior:
 
     def likelihood(self, sequences: List):
         """
-        Retrieves the likelihood of a given sequence.
+        COmputes the likelihood of a given sequence (already encoded SMILES strings).
         Params:
         :param sequences: (torch.Tensor) A batch of sequences
         :return:  (torch.Tensor) Log likelihood for each example.
