@@ -67,7 +67,7 @@ class RNN(nn.Module):
     
 class Prior:
 
-    def __init__(self, vocabulary: vc.Vocabulary, tokenizer: vc.Tokenizer, RNN_params: Mapping = None, max_seq_length: int = 256, use_cuda: bool = False ):
+    def __init__(self, vocabulary: vc.Vocabulary = vc.Vocabulary(), tokenizer: vc.Tokenizer = vc.Tokenizer(), RNN_params: Mapping = None, max_seq_length: int = 256, use_cuda: bool = False ):
         '''
         Generative model to create new SMILES strings
         Params: 
