@@ -142,11 +142,11 @@ class Trainer:
     '''
 
     def __init__(self, 
-                 epochs: int, lr: LearningRate, bs: int, patience: int,
+                 epochs: int, lr: LearningRate, bs: int,
                  save_path: str, save_epochs: int,  
                  smiles_path: str,
                  prior: Prior = None, prior_path: str = None,
-                 starting_epoch: int = 1):
+                 starting_epoch: int = 1, early_stop: bool = False, patience: int = None):
         
         '''
         Params:
@@ -164,11 +164,15 @@ class Trainer:
         '''
         
         assert (prior != None or prior_path != None) and not (prior and prior_path)
+        assert (not early_stop and not patience) or (early_stop and patience != None)
 
         self.epochs = epochs
         self.scheduler = lr
         self.batch_size = bs
+        
+        self.early_stop = early_stop
         self.patience = patience
+        self.losses = []
 
         self.save_path = save_path
         self.save_epochs = max(save_epochs, 1)
@@ -183,15 +187,29 @@ class Trainer:
 
     def train(self):
         end = self.epochs + self.starting_epoch - 1
+        p = 0
+        best_loss = 0.0
         for epoch in tqdm(range(self.starting_epoch, end), total = self.epochs, desc='Epochs'):
-            self.training_step(epoch)
-            
-            if epoch % self.save_epochs == 0:
-                self.prior.save(self.save_path)
+            epoch_loss = self.training_step(epoch)
+
+            if self.early_stop:
+                self.losses.append(epoch_loss)
+                if len(self.losses) > 1 and p < self.patience and  best_loss - epoch_loss  < 10e-3:
+                    best_loss = epoch_loss
+                    p = 0
+                elif epoch_loss > best_loss:
+                    p += 1
+                elif len(self.losses) == 0:
+                    best_loss = epoch_loss
+
+                if p >= self.patience:
+                    data = basename(self.smiles_path)
+                    self.prior.save(f'{self.save_path}.{data[:-4]}.{epoch}' )
         return 
     
     def training_step(self, epoch: int):
         train_d_loader = create_dataloader(self.smiles_path, self.prior.vocabulary, batch_size=self.batch_size)
+        ls = [] # losses for every batch
         for batch in tqdm(train_d_loader, total=len(train_d_loader), desc=f'Epoch {epoch}', leave=False):
             batch = batch.long()
             if self.prior.use_cuda:
@@ -200,11 +218,14 @@ class Trainer:
             self.scheduler.optimizer.zero_grad()
             loss.backward()
             self.scheduler.optimizer.step()
+            ls.append(loss.item())
         
         self.scheduler._add_metric(self.smiles_path)
         if epoch % self.save_epochs == 0:
             data = basename(self.smiles_path)
             self.prior.save(f'{self.save_path}.{data[:-4]}' if epoch == self.epochs - 1 else f'{self.save_path}.{data[:-4]}.{epoch}' )
+        
+        return np.mean(ls).item()
 
 
 
