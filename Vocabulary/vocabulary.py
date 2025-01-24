@@ -2,6 +2,7 @@ import numpy as np
 import torch
 
 from collections.abc import Mapping
+from typing import List
 import re
 
 class TokenAlreadyInVocabError(Exception):
@@ -14,15 +15,15 @@ class Vocabulary:
     Data structure for token storage and conversion
     '''
 
-    def __init__(self, tokens: Mapping = None, starting_id: int = 0):
+    def __init__(self, tokens: Mapping = None, starting_id: int = 2):
         '''
         Params: 
         :param tokens: (optional) (dict) Dictionary of token, id pairs
         :param starting_id: (optional) (int) Starting index for the new vocabulary
         '''
 
-        self.tokensToId = {}
-        self.idToTokens = {}
+        self.tokensToId = {'$': 0, '^': 1}
+        self.idToTokens = {0: '$', 1: '^'}
         self.current_id = starting_id
 
         if tokens:
@@ -69,14 +70,27 @@ class Vocabulary:
         :param token: (str) Token to add
         '''
         self._add(token, self.current_id)
+        self.current_id += 1
 
     def encode(self, token: str):
         '''
         Method to get the id of a specific token if present in the vocabulary, else returns None
         Params:
-        :param token: string correspondin to the token to encode
+        :param token: string corresponding to the token to encode
         '''
         return self.tokensToId.get(token, None)
+    
+    def encode_sequence(self, sequence: List[str]):
+        '''
+        Method to get the encoding of a specific sequence
+        Params:
+        :param sequence: List corresponding to the sequence to encode
+        '''
+        res = np.zeros_like(sequence, dtype=np.float32)
+        for i, token in enumerate(sequence):
+            res[i] = self.tokensToId.get(token, None)
+            
+        return res
     
     def decode(self, id: int):
         '''
@@ -114,7 +128,7 @@ class Vocabulary:
         else: 
             raise ValueError('Input must be either integer or string')
         
-    def __eq__(self, voc: Vocabulary): # type: ignore
+    def __eq__(self, voc):
         return self.tokensToId == voc.tokensToId and self.idToTokens == voc.idToTokens
     
     def __len__(self):

@@ -6,7 +6,8 @@ import torch.nn.functional as fnn
 from collections.abc import Mapping
 from typing import List, Tuple
 
-import Vocabulary.vocabulary as vc
+from Vocabulary import vocabulary as vc 
+
 
 class RNN(nn.Module):
     '''
