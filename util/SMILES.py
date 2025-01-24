@@ -23,7 +23,10 @@ def readSMILES(path: str):
 
 def vocabulary_from_SMILES_array(tokenized_SMILES: List[List[str]]):
         '''
-        Creates a vocabulary object 
+        Creates a vocabulary object from List of tokenized SMILES
+        Params: 
+        :param tokenized_SMILES: (List[List[str]]) List of tokenized SMILES strings
+
         '''
         vocabulary = Vocabulary()
         s = list(map(set, tokenized_SMILES))
