@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from typing import List, Tuple
 
 from Vocabulary import vocabulary as vc 
-
+from util.SMILES import readSMILES, vocabulary_from_SMILES
 
 class RNN(nn.Module):
     '''
@@ -68,7 +68,10 @@ class RNN(nn.Module):
     
 class Prior:
 
-    def __init__(self, vocabulary: vc.Vocabulary = vc.Vocabulary(), tokenizer: vc.Tokenizer = vc.Tokenizer(), RNN_params: Mapping = None, max_seq_length: int = 256, use_cuda: bool = False ):
+    def __init__(self, vocabulary: vc.Vocabulary = vc.Vocabulary(), tokenizer: vc.Tokenizer = vc.Tokenizer(), 
+                RNN_params: Mapping = None, max_seq_length: int = 256,
+                smiles_paths: str = ['data\Aurora-A_dataset.smi', 'data\B-raf_dataset.smi'],  
+                use_cuda: bool = False ):
         '''
         Generative model to create new SMILES strings
         Params: 
@@ -85,12 +88,20 @@ class Prior:
         
         self.max_seq_length = max_seq_length
 
+        self.use_cuda = use_cuda
+
         if not RNN_params: 
             RNN_params = {}
 
         self.RNN_params = RNN_params
 
+        if self.vocab_length == 0: 
+            self.vocabulary = vocabulary_from_SMILES(smiles_paths)
+            self.vocab_length = len(self.vocabulary)
+
         self.RNN = RNN(self.vocab_length, **self.RNN_params)
+        if self.use_cuda:
+            self.RNN.to('cuda')
 
         self.loss = nn.NLLLoss(reduction='none')
 

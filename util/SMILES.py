@@ -1,7 +1,7 @@
 import numpy as np
 from typing import List
 
-from Vocabulary.vocabulary import Vocabulary
+from Vocabulary.vocabulary import Vocabulary, Tokenizer
 
 
 def readSMILES(path: str):
@@ -21,15 +21,25 @@ def readSMILES(path: str):
     return SMILES_list
 
 
-def vocabulary_from_SMILES_array(tokenized_SMILES: List[List[str]]):
+def vocabulary_from_SMILES(path: str | List[str]):
         '''
         Creates a vocabulary object from List of tokenized SMILES
-        Params: 
-        :param tokenized_SMILES: (List[List[str]]) List of tokenized SMILES strings
+        Params: path: path or list of paths to SMILES file/s
+        :param path: path to 
 
         '''
         vocabulary = Vocabulary()
-        s = list(map(set, tokenized_SMILES))
+        SMILES_array = []
+        if type(path) == list:
+            for p in path: 
+                SMILES_array += readSMILES(p)
+        tokenizer = Tokenizer()
+        for i, s in enumerate(SMILES_array):
+            SMILES_array[i] = tokenizer.tokenize(s)
+        
+        SMILES_array = list(map(vocabulary.encode_sequence, SMILES_array))
+        
+        s = list(map(set, SMILES_array))
         res = set()
         for se in s:
             res = res.union(se)

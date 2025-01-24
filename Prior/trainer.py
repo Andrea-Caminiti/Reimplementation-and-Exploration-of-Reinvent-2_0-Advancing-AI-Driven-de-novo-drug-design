@@ -194,6 +194,8 @@ class Trainer:
         train_d_loader = create_dataloader(self.smiles_path, self.prior.vocabulary, batch_size=self.batch_size)
         for batch in tqdm(train_d_loader, total=len(train_d_loader), desc=f'Epoch {epoch}', leave=False):
             batch = batch.long()
+            if self.prior.use_cuda:
+                batch = batch.to('cuda')
             loss = self.prior.likelihood(batch).mean()
             self.scheduler.optimizer.zero_grad()
             loss.backward()
@@ -202,7 +204,7 @@ class Trainer:
         self.scheduler._add_metric(self.smiles_path)
         if epoch % self.save_epochs == 0:
             data = basename(self.smiles_path)
-            self.prior.save(f'Agent.{data[:-4]}' if epoch == self.epochs - 1 else f'Agent.{data[:-4]}.{epoch}' )
+            self.prior.save(f'{self.save_path}.{data[:-4]}' if epoch == self.epochs - 1 else f'{self.save_path}.{data[:-4]}.{epoch}' )
 
 
 
