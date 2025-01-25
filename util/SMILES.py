@@ -37,15 +37,16 @@ def vocabulary_from_SMILES(path: str | List[str]):
         for i, s in enumerate(SMILES_array):
             SMILES_array[i] = tokenizer.tokenize(s)
         
-        SMILES_array = list(map(vocabulary.encode_sequence, SMILES_array))
-        
         s = list(map(set, SMILES_array))
         res = set()
         for se in s:
             res = res.union(se)
+        #print(res)
         res = sorted(res)
-        res.remove('^')
-        res.remove('$')
+        if '^' in res:
+            res.remove('^')
+        if '$' in res:
+            res.remove('$')
         for s in res:
             vocabulary.add(s)
         

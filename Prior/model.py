@@ -6,6 +6,8 @@ import torch.nn.functional as fnn
 from collections.abc import Mapping
 from typing import List, Tuple
 
+from tqdm import tqdm
+
 from Vocabulary import vocabulary as vc 
 from util.SMILES import readSMILES, vocabulary_from_SMILES
 
@@ -27,7 +29,7 @@ class RNN(nn.Module):
         :param layer_size: (int) Dimension of each layer
         :param dropout: (float) Dropout to be used between layers
         '''
-        
+        super().__init__()
         #Embedding params
         self.vocab_size = vocab_size
         self.embedding_dim = embedding_dim
@@ -38,7 +40,7 @@ class RNN(nn.Module):
         self.layer_size = layer_size
         self.dropout = dropout
 
-        self.Embedding = nn.Embedding(self.vocab_size, self.embedding_dim)
+        self.embedding = nn.Embedding(self.vocab_size, self.embedding_dim)
         match cell_type: 
             case 'lstm': self.Rnn = nn.LSTM(self.embedding_dim, self.layer_size, self.num_layers, batch_first=True, dropout=self.dropout)
             case 'gru': self.Rnn = nn.GRU(self.embedding_dim, self.layer_size, self.num_layers, batch_first=True, dropout=self.dropout) 
@@ -52,16 +54,19 @@ class RNN(nn.Module):
         :param x: (torch.Tensor) Sequence to be passed through the network
         :param hidden: (torch.Tensor) Hidden state
         '''
-
+        
         batch_size, seq_len = x.size()
         if not hidden: 
-            size = (self._num_layers, batch_size, self._layer_size)
+            size = (self.num_layers, batch_size, self.layer_size)
             match self.cell_type:
-                case 'lstm': hidden = [torch.zeros(*size), torch.zeros(*size)]
-                case 'gru': hidden = torch.zeros(*size)
-            
-        emb = self.Embedding(x)
+                case 'lstm': hidden = [torch.zeros(*size).to(device='cuda'), torch.zeros(*size).to(device='cuda')]
+                case 'gru': hidden = torch.zeros(*size).to(device='cuda')
+        
+        emb = self.embedding(x)
+        
         res, hidden_state = self.Rnn(emb, hidden)
+        del emb, hidden
+        
         res = self.Linear(res)
 
         return res, hidden_state
@@ -95,10 +100,10 @@ class Prior:
 
         self.RNN_params = RNN_params
 
-        if self.vocab_length == 0: 
+        if self.vocab_length == 2: 
             self.vocabulary = vocabulary_from_SMILES(smiles_paths)
             self.vocab_length = len(self.vocabulary)
-
+            
         self.RNN = RNN(self.vocab_length, **self.RNN_params)
         if self.use_cuda:
             self.RNN.to('cuda')
@@ -117,7 +122,7 @@ class Prior:
             'tokenizer': self.tokenizer,
             'max_sequence_length': self.max_seq_length,
             'RNN_params': self.RNN_params(),
-            'network': self.network.state_dict()
+            'network': self.RNN.state_dict()
         }
 
         torch.save(params, path)
@@ -143,18 +148,19 @@ class Prior:
             max_sequence_length=params['max_sequence_length']
         )
 
-        model.network.load_state_dict(params["network"])
+        model.RNN.load_state_dict(params["network"])
         
         return model
 
     def likelihood(self, sequences: List):
         """
-        COmputes the likelihood of a given sequence (already encoded SMILES strings).
+        Computes the likelihood of a given sequence (already encoded SMILES strings).
         Params:
         :param sequences: (torch.Tensor) A batch of sequences
         :return:  (torch.Tensor) Log likelihood for each example.
         """
-        logits, _ = self.network(sequences[:, :-1])
+        #print(sequences[:, :-1].size())
+        logits, _ = self.RNN(sequences[:, :-1])
         log_probs = logits.log_softmax(dim=2)
         return self.loss(log_probs.transpose(1, 2), sequences[:, 1:]).sum(dim=1)
     
@@ -212,19 +218,20 @@ class Prior:
         :param batch_size: how many SMILES string to sample
         '''
 
-        in_vector = torch.Tensor([self.vocabulary['^']] * batch_size, dtype=torch.long)
-        sequences = [self.vocabulary["^"] * torch.ones([batch_size, 1], dtype=torch.long)]
+        in_vector = torch.ones(batch_size, dtype=torch.long, device='cuda')
+        sequences = [torch.ones([batch_size, 1], dtype=torch.long, device='cuda')]
         hidden_state = None
-        neg_log_like = torch.zeros(batch_size)
+        neg_log_like = torch.zeros(batch_size).to(device='cuda')
 
-        for _ in range(self.max_sequence_length - 1):
-            logits, hidden_state = self.network(in_vector.unsqueeze(1), hidden_state)
+        for _ in tqdm(range(self.max_seq_length - 1), desc='Sampling...'):
+            logits, hidden_state = self.RNN(in_vector.unsqueeze(1), hidden_state)
             logits = logits.squeeze(1)
-            probabilities = logits.softmax(dim=1)
-            log_probs = logits.log_softmax(dim=1)
-            in_vector = torch.multinomial(probabilities, 1).view(-1)
+            probabilities = logits.softmax(dim=1).to(device='cuda')
+            log_probs = logits.log_softmax(dim=1).to(device='cuda')
+            in_vector = torch.multinomial(probabilities, 1).view(-1).to(device='cuda')
             sequences.append(in_vector.view(-1, 1))
-            neg_log_like += self._nll_loss(log_probs, in_vector)
+            neg_log_like += self.loss(log_probs, in_vector)
+            del log_probs, probabilities
             if in_vector.sum() == 0:
                 break
 

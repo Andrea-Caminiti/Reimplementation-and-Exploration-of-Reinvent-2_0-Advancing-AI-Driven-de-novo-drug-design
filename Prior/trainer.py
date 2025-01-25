@@ -5,6 +5,7 @@ import torch.nn.functional as fnn
 import scipy.stats as sps
 from tqdm import tqdm
 from os.path import basename
+import gc
 
 from Prior.model import Prior
 from util import SMILES
@@ -52,7 +53,7 @@ class LearningRate:
         if prior_path: 
             self.prior = Prior().load_prior(prior_path)
         
-        self.optimizer = torch.optim.Adam(self.prior.network.parameters(), lr = self.max_value)
+        self.optimizer = torch.optim.Adam(self.prior.RNN.parameters(), lr = self.max_value)
 
         self.scheduler = None
 
@@ -104,10 +105,10 @@ class LearningRate:
             training_nlls = self._nlls(smiles_path)
         self.metrics.append(jsd([sampled_nlls, training_nlls, valid_nlls]))
     
-    def _nnls(self, path: str, validation: bool):
+    def _nlls(self, path: str, validation: bool = False):
         def pad(nlls):
             length = len(nlls)
-            _nlls = nlls
+            neg_lls = nlls
             if length < self.sample_size:
                 delta = self.sample_size - length
                 padding = []
@@ -120,20 +121,31 @@ class LearningRate:
                     else:
                         counter += 1
 
-                _nlls = np.concatenate([nlls, padding])
+                neg_lls = np.concatenate([nlls, padding])
 
-            return _nlls
+            return neg_lls
         
         if validation: 
-            train, val = create_dataloader(path, self.prior.vocabulary, self.prior.tokenizer)
+            train, val = create_dataloader(path, self.prior.vocabulary, self.prior.tokenizer, validation=validation)
             train_nll = []
             for batch in train:
-                train_nll = self.prior.likelihood(batch)
+                batch = batch.to(device='cuda')
+                train_nll += self.prior.likelihood(batch)
             val_nll = []
             for batch in val:
-                val_nll = self.prior.likelihood(batch)
+                batch = batch.to(device='cuda')
+                val_nll += self.prior.likelihood(batch)
+            
+            return pad(torch.concatenate(train_nll)), pad(torch.concatenate(val_nll))
+        else:
+            train = create_dataloader(path, self.prior.vocabulary, self.prior.tokenizer)
+            train_nll = []
+            for batch in train:
+                batch = batch.to(device='cuda')
+                train_nll += self.prior.likelihood(batch)
+            
+            return pad(torch.concatenate(train_nll))
 
-        return pad(torch.concatenate(train_nll)), pad(torch.concatenate(val_nll))
 
 
 class Trainer: 
@@ -190,6 +202,7 @@ class Trainer:
         p = 0
         best_loss = 0.0
         for epoch in tqdm(range(self.starting_epoch, end), total = self.epochs, desc='Epochs'):
+            gc.collect()
             epoch_loss = self.training_step(epoch)
 
             if self.early_stop:
@@ -214,6 +227,7 @@ class Trainer:
             batch = batch.long()
             if self.prior.use_cuda:
                 batch = batch.to('cuda')
+            #print(batch.size())
             loss = self.prior.likelihood(batch).mean()
             self.scheduler.optimizer.zero_grad()
             loss.backward()
