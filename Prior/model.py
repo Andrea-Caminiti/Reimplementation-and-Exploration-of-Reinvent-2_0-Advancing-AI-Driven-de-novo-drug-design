@@ -5,6 +5,7 @@ import torch.nn.functional as fnn
 
 from collections.abc import Mapping
 from typing import List, Tuple
+import gc 
 
 from tqdm import tqdm
 
@@ -61,7 +62,6 @@ class RNN(nn.Module):
             match self.cell_type:
                 case 'lstm': hidden = [torch.zeros(*size).to(device='cuda'), torch.zeros(*size).to(device='cuda')]
                 case 'gru': hidden = torch.zeros(*size).to(device='cuda')
-        
         emb = self.embedding(x)
         
         res, hidden_state = self.Rnn(emb, hidden)
@@ -162,7 +162,8 @@ class Prior:
         #print(sequences[:, :-1].size())
         logits, _ = self.RNN(sequences[:, :-1])
         log_probs = logits.log_softmax(dim=2)
-        return self.loss(log_probs.transpose(1, 2), sequences[:, 1:]).sum(dim=1)
+        del logits
+        return self.loss(log_probs.transpose(1, 2), sequences[:, 1:].long()).sum(dim=1)
     
     def likelihood_smiles(self, smiles: List):
         '''
@@ -223,11 +224,13 @@ class Prior:
         hidden_state = None
         neg_log_like = torch.zeros(batch_size).to(device='cuda')
 
-        for _ in tqdm(range(self.max_seq_length - 1), desc='Sampling...'):
+        for _ in tqdm(range(self.max_seq_length - 1), desc='Sampling...', leave=False):
+            gc.collect()
             logits, hidden_state = self.RNN(in_vector.unsqueeze(1), hidden_state)
             logits = logits.squeeze(1)
             probabilities = logits.softmax(dim=1).to(device='cuda')
             log_probs = logits.log_softmax(dim=1).to(device='cuda')
+            del logits
             in_vector = torch.multinomial(probabilities, 1).view(-1).to(device='cuda')
             sequences.append(in_vector.view(-1, 1))
             neg_log_like += self.loss(log_probs, in_vector)

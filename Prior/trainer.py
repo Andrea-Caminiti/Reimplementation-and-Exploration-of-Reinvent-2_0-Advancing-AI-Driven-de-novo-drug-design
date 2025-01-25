@@ -224,6 +224,7 @@ class Trainer:
         train_d_loader = create_dataloader(self.smiles_path, self.prior.vocabulary, batch_size=self.batch_size)
         ls = [] # losses for every batch
         for batch in tqdm(train_d_loader, total=len(train_d_loader), desc=f'Epoch {epoch}', leave=False):
+            gc.collect()
             batch = batch.long()
             if self.prior.use_cuda:
                 batch = batch.to('cuda')

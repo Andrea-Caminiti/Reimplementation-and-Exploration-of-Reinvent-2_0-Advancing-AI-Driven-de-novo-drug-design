@@ -92,13 +92,16 @@ class Vocabulary:
             
         return res
     
-    def decode(self, id: int):
+    def decode(self, id: int | List[int]):
         '''
         Method to get the token of a specific id if present in the vocabulary, else returns None
         Params:
         :param id: integer correspondin to the id to decode
         '''
-        return self.idToTokens.get(id, None)
+        if type(id) == int:
+            return self.idToTokens.get(id, None)
+        else:
+            return np.array(list(map(self.idToTokens.get, id.tolist())))
 
     def __getitem__(self, x: int | str):
         if type(x) == int:
