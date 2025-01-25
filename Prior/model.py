@@ -4,13 +4,12 @@ import torch.nn as nn
 import torch.nn.functional as fnn
 
 from collections.abc import Mapping
-from typing import List, Tuple
-import gc 
+from typing import List
 
 from tqdm import tqdm
 
 from Vocabulary import vocabulary as vc 
-from util.SMILES import readSMILES, vocabulary_from_SMILES
+from util.SMILES import vocabulary_from_SMILES
 
 class RNN(nn.Module):
     '''
@@ -121,7 +120,7 @@ class Prior:
             'vocabulary': self.vocabulary,
             'tokenizer': self.tokenizer,
             'max_sequence_length': self.max_seq_length,
-            'RNN_params': self.RNN_params(),
+            'RNN_params': self.RNN_params,
             'network': self.RNN.state_dict()
         }
 
@@ -225,7 +224,6 @@ class Prior:
         neg_log_like = torch.zeros(batch_size).to(device='cuda')
 
         for _ in tqdm(range(self.max_seq_length - 1), desc='Sampling...', leave=False):
-            gc.collect()
             logits, hidden_state = self.RNN(in_vector.unsqueeze(1), hidden_state)
             logits = logits.squeeze(1)
             probabilities = logits.softmax(dim=1).to(device='cuda')
