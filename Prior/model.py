@@ -217,7 +217,7 @@ class Prior:
         Params:
         :param batch_size: how many SMILES string to sample
         '''
-
+        #Start with vocabulary('^') filled arrays
         in_vector = torch.ones(batch_size, dtype=torch.long, device='cuda')
         sequences = [torch.ones([batch_size, 1], dtype=torch.long, device='cuda')]
         hidden_state = None
