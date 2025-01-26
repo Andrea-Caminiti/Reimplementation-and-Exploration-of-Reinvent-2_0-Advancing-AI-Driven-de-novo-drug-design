@@ -211,6 +211,11 @@ class Prior:
             del seqs, likelihoods
         return smiles_sampled, np.concatenate(likelihoods_sampled)
     
+    def sample_sequences_and_smiles(self, batch_size=128):
+        seqs, likelihoods = self.sample(batch_size=batch_size)
+        smiles = [self.tokenizer.untokenize(self.vocabulary.decode(seq)) for seq in seqs.cpu().numpy()]
+        return seqs, smiles, likelihoods
+    
     def sample(self, batch_size: int = 128):
         '''
         Samples batch_size SMILES from the prior
