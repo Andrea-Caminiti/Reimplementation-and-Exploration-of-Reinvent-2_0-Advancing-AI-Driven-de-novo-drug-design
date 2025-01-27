@@ -34,6 +34,7 @@ TRAIN_AGENT_CONFIG_FROM_SCRATCH_BRAF = {
     #Trainer config
     'epochs': 100,
     'bs': 128, 
+    'early_stop': True,
     'patience_train': 5,
     'save_path': 'Agents/Agent',
     'save_epochs': 3,

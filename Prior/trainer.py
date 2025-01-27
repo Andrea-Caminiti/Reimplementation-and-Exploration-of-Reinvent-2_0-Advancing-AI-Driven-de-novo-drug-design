@@ -92,7 +92,6 @@ class LearningRate:
     
     def _add_metric(self, smiles_path: str):
         def jsd(dists):
-                print([dist.shape for dist in dists])
                 num_dists = len(dists)
                 avg_dist = np.sum(dists, axis=0) / num_dists
                 return np.sum([sps.entropy(dist, avg_dist) for dist in dists]) / num_dists
@@ -208,7 +207,7 @@ class Trainer:
 
             if self.early_stop:
                 self.losses.append(epoch_loss)
-                if len(self.losses) > 1 and p < self.patience and  best_loss - epoch_loss  < 10e-3:
+                if len(self.losses) > 1 and p < self.patience and  epoch_loss - best_loss  < 10e-3:
                     best_loss = epoch_loss
                     p = 0
                 elif epoch_loss > best_loss:

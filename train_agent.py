@@ -5,7 +5,7 @@ from configurations import TRAIN_AGENT_CONFIG_FROM_SCRATCH_AURORA as Auro
 from configurations import TRAIN_AGENT_CONFIG_FROM_SCRATCH_BRAF as Braf
 import torch
 if __name__ == '__main__':
-    
+
     print('CUDA' if torch.cuda.is_available() else 'CPU')
     
     agent = Prior(use_cuda=True)
@@ -32,6 +32,35 @@ if __name__ == '__main__':
                       prior=agent, 
                       prior_path=Auro['prior_path'],
                       starting_epoch=Auro['starting_epoch']
+                      ) 
+    
+    trainer.train()
+
+    agent = Prior(use_cuda=True)
+
+    lr = LearningRate(prior=agent, 
+                      prior_path=Braf['prior_path'],
+                      mode=Braf['mode'],
+                      max_v=Braf['max_v'], 
+                      min_v=Braf['min_v'], 
+                      step=Braf['step'], 
+                      decay=Braf['decay'], 
+                      sample_size=Braf['sample_size'],
+                      patience=Braf['patience_lr'], 
+                      validation=Braf['validation'])
+    
+    trainer = Trainer(epochs=Braf['epochs'],
+                      lr=lr,
+                      bs=Braf['bs'],
+                      early_stop=Braf['early_stop'],
+                      early_stop=Braf['early_stop'],
+                      patience=Braf['patience_train'],
+                      save_path=Braf['save_path'],
+                      save_epochs=Braf['save_epochs'],
+                      smiles_path=Braf['smiles_path'],
+                      prior=agent, 
+                      prior_path=Braf['prior_path'],
+                      starting_epoch=Braf['starting_epoch']
                       ) 
     
     trainer.train()
