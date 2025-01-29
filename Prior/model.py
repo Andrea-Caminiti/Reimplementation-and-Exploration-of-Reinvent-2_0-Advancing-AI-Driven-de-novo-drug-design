@@ -42,8 +42,8 @@ class RNN(nn.Module):
 
         self.embedding = nn.Embedding(self.vocab_size, self.embedding_dim)
         match cell_type: 
-            case 'lstm': self.Rnn = nn.LSTM(self.embedding_dim, self.layer_size, self.num_layers, batch_first=True, dropout=self.dropout)
-            case 'gru': self.Rnn = nn.GRU(self.embedding_dim, self.layer_size, self.num_layers, batch_first=True, dropout=self.dropout) 
+            case 'lstm': self.network = nn.LSTM(self.embedding_dim, self.layer_size, self.num_layers, batch_first=True, dropout=self.dropout)
+            case 'gru': self.network = nn.GRU(self.embedding_dim, self.layer_size, self.num_layers, batch_first=True, dropout=self.dropout) 
             case _: raise ValueError('Invalid cell_type parameter')
         self.Linear = nn.Linear(self.layer_size, self.vocab_size)
 
@@ -63,17 +63,51 @@ class RNN(nn.Module):
                 case 'gru': hidden = torch.zeros(*size).to(device='cuda')
         emb = self.embedding(x)
         
-        res, hidden_state = self.Rnn(emb, hidden)
+        res, hidden_state = self.network(emb, hidden)
         del emb, hidden
         
         res = self.Linear(res)
 
         return res, hidden_state
     
+class Transformer(nn.Module):
+    def __init__(self, vocab_size: int, embed_dim: int = 256, num_heads: int = 8, num_layers: int = 5, max_seq_len: int = 256):
+        super().__init__()
+        '''
+        Params:
+        :param vocab_size: (int) Size of the vocabulary and thus the final linear output layer
+        :param embedding_dim: (int) Dimension of the output of the Embedding layer
+        :param num_heads: (int) Number of attention heads
+        :param num_layers: (int) number of RNN layers
+        :param max_seq_len: (int) Maximum sequence length
+        '''
+        self.vocab_size = vocab_size
+        self.embed_dim = embed_dim
+        self.max_seq_len = max_seq_len
+        self.token_embedding = nn.Embedding(vocab_size, embed_dim)
+        self.positional_encoding = nn.Parameter(self._generate_positional_encoding(max_seq_len, embed_dim))
+        self.decoder = nn.TransformerDecoder(
+            nn.TransformerDecoderLayer(d_model=embed_dim, nhead=num_heads),
+            num_layers=num_layers
+        )
+        self.output_layer = nn.Linear(embed_dim, vocab_size)
+    
+    def _generate_positional_encoding(self, max_seq_len, embed_dim):
+        pos = torch.arange(0, max_seq_len).unsqueeze(1)
+        div_term = torch.exp(-torch.arange(0, embed_dim, 2) * np.log(10000.0) / embed_dim)
+        pos_encoding = torch.zeros(max_seq_len, embed_dim)
+        pos_encoding[:, 0::2] = torch.sin(pos * div_term)
+        pos_encoding[:, 1::2] = torch.cos(pos * div_term)
+        return pos_encoding.unsqueeze(0)
+
+    def forward(self, x, tgt_mask=None):
+        x = self.token_embedding(x) + self.positional_encoding[:, :x.size(1), :]
+        x = self.decoder(x, memory=None, tgt_mask=tgt_mask)
+        return self.output_layer(x)
 class Prior:
 
     def __init__(self, vocabulary: vc.Vocabulary = vc.Vocabulary(), tokenizer: vc.Tokenizer = vc.Tokenizer(), 
-                RNN_params: Mapping = None, max_seq_length: int = 256,
+                network_type:str = 'rnn', network_params: Mapping = None, max_seq_length: int = 256,
                 smiles_paths: str = ['data\Aurora-A_dataset.smi', 'data\B-raf_dataset.smi'],  
                 use_cuda: bool = False ):
         '''
@@ -81,7 +115,8 @@ class Prior:
         Params: 
         :param vocabulary: (model.vocabulary.Vocabulary) vocabulary of SMILES tokens
         :param tokenizer: (model.vocabulary.Tokenizer) tokenizer for SMILES strings
-        :param RNN_params: (dict) dictionary of parameters for internal RNN network
+        :param network_type: (str) Type of network to use, possibilities are "rnn" and "transformer"
+        :param network_params: (dict) dictionary of parameters for internal network
         :param max_seq_length: (int) maximum sequence length per each input 
         :param use_cuda: (boolean) boolean to activate cuda computation or not
         '''
@@ -94,18 +129,23 @@ class Prior:
 
         self.use_cuda = use_cuda
 
-        if not RNN_params: 
-            RNN_params = {}
+        if not network_params: 
+            network_params = {}
 
-        self.RNN_params = RNN_params
+        self.network_type = network_type
+        self.network_params = network_params
 
         if self.vocab_length == 2: 
             self.vocabulary = vocabulary_from_SMILES(smiles_paths)
             self.vocab_length = len(self.vocabulary)
-            
-        self.RNN = RNN(self.vocab_length, **self.RNN_params)
+
+        if self.network_type.lower() == 'rnn':   
+            self.network = RNN(self.vocab_length, **self.network_params)
+        elif self.network_type.lower() == 'transformer':
+            self.network = Transformer(self.vocab_length, **self.network_params)
+        
         if self.use_cuda:
-            self.RNN.to('cuda')
+            self.network.to('cuda')
 
         self.loss = nn.NLLLoss(reduction='none')
 
@@ -121,7 +161,7 @@ class Prior:
             'tokenizer': self.tokenizer,
             'max_sequence_length': self.max_seq_length,
             'RNN_params': self.RNN_params,
-            'network': self.RNN.state_dict()
+            'network': self.network.state_dict()
         }
 
         torch.save(params, path)
@@ -147,7 +187,7 @@ class Prior:
             max_sequence_length=params['max_sequence_length']
         )
 
-        model.RNN.load_state_dict(params["network"])
+        model.network.load_state_dict(params["network"])
         
         return model
 
@@ -159,7 +199,7 @@ class Prior:
         :return:  (torch.Tensor) Log likelihood for each example.
         """
         #print(sequences[:, :-1].size())
-        logits, _ = self.RNN(sequences[:, :-1])
+        logits, _ = self.network(sequences[:, :-1])
         log_probs = logits.log_softmax(dim=2)
         del logits
         return self.loss(log_probs.transpose(1, 2), sequences[:, 1:].long()).sum(dim=1)
@@ -229,7 +269,7 @@ class Prior:
         neg_log_like = torch.zeros(batch_size).to(device='cuda')
 
         for _ in tqdm(range(self.max_seq_length - 1), desc='Sampling...', leave=False):
-            logits, hidden_state = self.RNN(in_vector.unsqueeze(1), hidden_state)
+            logits, hidden_state = self.network(in_vector.unsqueeze(1), hidden_state)
             logits = logits.squeeze(1)
             probabilities = logits.softmax(dim=1).to(device='cuda')
             log_probs = logits.log_softmax(dim=1).to(device='cuda')

@@ -51,7 +51,7 @@ class LearningRate:
         if prior_path: 
             self.prior = Prior().load_prior(prior_path)
         
-        self.optimizer = torch.optim.Adam(self.prior.RNN.parameters(), lr = self.max_value)
+        self.optimizer = torch.optim.Adam(self.prior.network.parameters(), lr = self.max_value)
 
         self.scheduler = None
 
