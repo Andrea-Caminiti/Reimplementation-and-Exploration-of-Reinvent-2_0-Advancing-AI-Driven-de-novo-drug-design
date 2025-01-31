@@ -58,7 +58,10 @@ class ScoringFunction():
     
     def final_score(self, smiles: List[str]):
         
-        mols, indexes = self.smiles_to_mols(smiles)
+        mols = [rk.MolFromSmiles(smile) for smile in smiles]
+        valid = [0 if mol is None else 1 for mol in mols]
+        indexes = [index for index, boolean in enumerate(valid) if boolean]
+        mols = [mols[index] for index in indexes]
         length = len(smiles)
         summaries = [total_score(c.score(mols), length, indexes) for c in self.components]
         penalty = self.penalty(summaries, smiles)

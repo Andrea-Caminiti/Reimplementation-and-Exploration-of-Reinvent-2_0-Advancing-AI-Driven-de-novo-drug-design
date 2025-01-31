@@ -32,13 +32,13 @@ class Buffer():
 
     def purge(self):
         df = self.memory.drop_duplicates(subset=['smiles'])
-        df.sort_values(by='score', inplace=True, ascending=bool)
+        df.sort_values(by='score', inplace=True, ascending=False)
         self.memory = df.iloc[:self.size]
     
     def add(self, smiles: List[str], score: List[float], neg_likelihood: FloatTensor):
         # NOTE: likelihood should be already negative
-        df = pd.DataFrame({"smiles": smiles, "score": score, "likelihood": neg_likelihood.detach().cpu().numpy()})
-        self.memory = self.memory.append(df)
+        df = pd.DataFrame({"smiles": smiles, "score": score.cpu().numpy(), "likelihood": neg_likelihood.detach().cpu().numpy()})
+        self.memory = self.memory._append(df)
         self.purge()
 
     def sample(self):

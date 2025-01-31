@@ -143,9 +143,9 @@ class IdenticalTopologicalScaffold(ScaffoldFilter):
 
     def score(self, score_summary: ScoreSummary):
         scores = score_summary.total_score
-        smiles = score_summary.scored_smiles
+        smiles = score_summary.smiles
 
-        for index in score_summary.valid_idxs:
+        for index in score_summary.valid_indexes:
             smile = rk_smiles(smiles[index])
             scaffold = self._calculate_scaffold(smile)
             scores[index] = 0 if self.smiles_already_in_scaffold(scaffold, smile) else scores[index]

@@ -6,13 +6,15 @@ import os
 import matplotlib.pyplot as plt
 import seaborn as sb
 import pandas as pd
+import rdkit.RDLogger as rkl
+import rdkit.rdBase as rkrb
 
 def run(reinforcement: Reinforcement, steps: int, csv_folder_path: str, name: str):
     if not os.path.exists(csv_folder_path):
         os.makedirs(csv_folder_path)
     if not os.path.exists('./logs'):
         os.mkdir('./logs')
-    with open(f'./logs/{name}.txt') as out:
+    with open(f'./logs/{name}.txt', 'a') as out:
         reinforcement.run(steps, out, csv_folder_path, name)
 
 def plots(csv_folder_path: str, name: str):
@@ -61,6 +63,11 @@ def plots(csv_folder_path: str, name: str):
         fig.savefig(f'plots_l_divided_{name}.png')
 
 if __name__ == '__main__':
+    
+    log = rkl.logger()
+    log.setLevel(rkl.ERROR)
+    rkrb.DisableLog('rdApp.error')
+    
     R_Aurora = Reinforcement(Auro['batch_size'], Auro['sigma'], Auro['f'], 
                              Auro['scoring_func'], Auro['buffer'], Auro['prior_path'],
                              Auro['agent_path'], Auro['lr'])
@@ -77,3 +84,7 @@ if __name__ == '__main__':
     run(R_Aurora, 500, 'csvs', Auro['name'])
     run(R_Braf, 500, 'csvs', Braf['name'])
     run(R_Explo, 500, 'csvs', Explo['name'])
+    
+    plots('csvs', Auro['name'])
+    plots('csvs', Braf['name'])
+    plots('csvs', Explo['name'])

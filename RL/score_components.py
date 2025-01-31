@@ -44,7 +44,7 @@ class CustomAlerts(ScoreComponent):
     
     def score(self, mols: List):
         score = self.match(mols, self.custom_alerts)
-        score_summary = Component(total_score=score, parameters=self.parameters)
+        score_summary = Component(score=score, parameters=self.parameters)
         return score_summary
     
     def match(self, mols: List, smarts: List[str]):
@@ -119,13 +119,13 @@ class TanimotoSimilarity(ScoreComponent):
         self.fingerprints, self.indexes = self.smiles_to_fingerprints(self.parameters.smiles)
 
     def score(self, mols: List):
-        fps = self._mols_to_fingerprints(mols)
-        score = self.np.array([np.max(rk.DataStructs.BulkTanimotoSimilarity(fp, self.fingerprints)) for fp in fps])
+        fps = self.mols_to_fingerprints(mols)
+        score = np.array([np.max(rk.DataStructs.BulkTanimotoSimilarity(fp, self.fingerprints)) for fp in fps])
     
         return Component(score, self.parameters)
         
 
-    def _mols_to_fingerprints(self, mols: List):
+    def mols_to_fingerprints(self, mols: List):
         fps = [rk.AllChem.GetMorganFingerprint(
             mol,
             radius=3,

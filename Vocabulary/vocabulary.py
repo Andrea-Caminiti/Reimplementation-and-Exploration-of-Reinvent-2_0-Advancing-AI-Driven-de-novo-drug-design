@@ -78,7 +78,10 @@ class Vocabulary:
         Params:
         :param token: string corresponding to the token to encode
         '''
-        return self.tokensToId.get(token, None)
+        if type(token) == str:
+            return self.tokensToId.get(token, None)
+        else:
+            return  np.array(list(map(self.tokensToId.get, token)))
     
     def encode_sequence(self, sequence: List[str]):
         '''
