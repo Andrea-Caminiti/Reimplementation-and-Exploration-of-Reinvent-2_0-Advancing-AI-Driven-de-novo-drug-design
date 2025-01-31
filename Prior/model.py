@@ -160,7 +160,7 @@ class Prior:
             'vocabulary': self.vocabulary,
             'tokenizer': self.tokenizer,
             'max_sequence_length': self.max_seq_length,
-            'RNN_params': self.RNN_params,
+            'network_params': self.network_params,
             'network': self.network.state_dict()
         }
 
@@ -183,8 +183,8 @@ class Prior:
         model = Prior(
             vocabulary=params['vocabulary'],
             tokenizer=params['tokenizer'],
-            RNN_params=params['RNN_params'],
-            max_sequence_length=params['max_sequence_length']
+            network_params=params['network_params'],
+            max_seq_length=params['max_sequence_length']
         )
 
         model.network.load_state_dict(params["network"])
