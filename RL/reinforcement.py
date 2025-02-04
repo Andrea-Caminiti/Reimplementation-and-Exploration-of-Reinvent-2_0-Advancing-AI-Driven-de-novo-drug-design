@@ -57,6 +57,7 @@ class Reinforcement:
         p_likelihoods = []
         scores = []
         valid_smiles = []
+        losses = []
         for step in tqdm(range(steps), desc=f'Run', leave=False):
             sequences, smiles, a_likelihood = self.agent.sample_sequences_and_smiles(self.batch_size)
             _  , indexes = np.unique(smiles, return_index=True)
@@ -79,18 +80,19 @@ class Reinforcement:
             loss.backward()
             self.optimizer.step()
             
-            
             mols = [rk.MolFromSmiles(smile) for smile in smiles]
             valid = [0 if mol is None else 1 for mol in mols]
             valid_smiles.append(np.sum(valid)/len(smiles))
-            a_likelihoods.append(a_likelihood.mean())
-            p_likelihoods.append(p_likelihood.mean())
-            scores.append(score.mean())
+            a_likelihoods.append(a_likelihood.mean().cpu().detach().numpy())
+            p_likelihoods.append(p_likelihood.mean().cpu().detach().numpy())
+            scores.append(score.mean().cpu().detach().numpy())
+            losses.append(loss.detach().cpu().numpy())
         
         out_file.write('End of the run\nSummary:\n')
-        out_file.write(f'Average Agent Likelihood: {np.mean(a_likelihoods.cpu().numpy())}\n')
-        out_file.write(f'Average Prior Likelihood: {np.mean(p_likelihoods.cpu().numpy())}\n')
-        out_file.write(f'Average Score: {np.mean(score.cpu().numpy())}\n')
+        out_file.write(f'Average Agent Likelihood: {np.mean(a_likelihoods)}\n')
+        out_file.write(f'Average Prior Likelihood: {np.mean(p_likelihoods)}\n')
+        out_file.write(f'Average Augmented Loss: {np.mean(losses)}\n')
+        out_file.write(f'Average Score: {np.mean(scores)}\n')
         out_file.write(f'Average Valid Smiles: {np.mean(valid_smiles)}\n\n\n')
         self.buffer.log_out_memory(os.path.join(csv_folder_path, f'buffer_memory_{name}.csv'))
         df = pd.DataFrame({'Agent_likelihoods': a_likelihoods, 

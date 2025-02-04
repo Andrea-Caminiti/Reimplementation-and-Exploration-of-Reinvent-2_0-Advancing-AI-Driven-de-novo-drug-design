@@ -79,7 +79,7 @@ class NoScaffoldFilter(ScaffoldFilter):
             if scores[index] >= self.parameters.minscore:
                 self.add_to_scaffold(index, scores[index], smile, smile, summary.components)
             
-            return scores
+        return scores
 
 class ScaffoldSimilarityFilter(ScaffoldFilter):
     '''
@@ -97,13 +97,13 @@ class ScaffoldSimilarityFilter(ScaffoldFilter):
             smile = rk_smiles(smiles[index])
             scaffold = self.compute_scaffold(smile)
             scaffold = self.similar_to(scaffold)
-            scores[index] = 0.0 if self.smiles_already_in_scaffold(smile) else scores[index]
+            scores[index] = 0.0 if self.smiles_already_in_scaffold(scaffold, smile) else scores[index]
 
             if scores[index] >= self.parameters.minscore:
                 self.add_to_scaffold(index, scores[index], smile, scaffold, summary.components)
                 scores[index] = self.penalize(scaffold, scores[index])
             
-            return scores
+        return scores
         
     def compute_scaffold(self, smile):
         mol = rk.MolFromSmiles(smile)
@@ -141,16 +141,16 @@ class IdenticalTopologicalScaffold(ScaffoldFilter):
     def __init__(self, parameters: ScaffoldParameters):
         super().__init__(parameters)
 
-    def score(self, score_summary: ScoreSummary):
-        scores = score_summary.total_score
-        smiles = score_summary.smiles
+    def score(self, summary: ScoreSummary):
+        scores = summary.total_score
+        smiles = summary.smiles
 
-        for index in score_summary.valid_indexes:
+        for index in summary.valid_indexes:
             smile = rk_smiles(smiles[index])
             scaffold = self._calculate_scaffold(smile)
             scores[index] = 0 if self.smiles_already_in_scaffold(scaffold, smile) else scores[index]
             if scores[index] >= self.parameters.minscore:
-                self.add_to_scaffold(index, scores[index], smile, scaffold, score_summary.scaffold_log)
+                self.add_to_scaffold(index, scores[index], smile, scaffold, summary.components)
                 scores[index] = self.penalize(scaffold, scores[index])
         return scores
 

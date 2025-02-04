@@ -1,4 +1,4 @@
-from RL.filters import IdenticalTopologicalScaffold, NoScaffoldFilter
+from RL.filters import IdenticalTopologicalScaffold, NoScaffoldFilter, ScaffoldSimilarityFilter
 from RL.parameters import ScaffoldParameters, ComponentParameters
 from RL.scoring_functions import CustomProduct, CustomSum
 from RL.score_components import TanimotoSimilarity, JaccardDistance, \
@@ -9,10 +9,9 @@ from RL.score_components import TanimotoSimilarity, JaccardDistance, \
                                  NumRings
 from RL.buffer import Buffer
 from Prior.model import Prior
-
-TRAIN_AGENT_CONFIG_FROM_SCRATCH_AURORA = {
+TRAIN_AGENT_CONFIG_FROM_SCRATCH = {
     #Learning rate config
-    'prior_path': None,
+    'prior_path': 'priors/prior.dataset',
     'mode': 'adaptive',
     'max_v': 5e-3, 
     'min_v': 1e-5, 
@@ -22,7 +21,28 @@ TRAIN_AGENT_CONFIG_FROM_SCRATCH_AURORA = {
     'patience_lr': 5, 
     'validation': False,
     #Trainer config
-    'epochs': 100,
+    'epochs': 20,
+    'bs': 16, 
+    'early_stop': True,
+    'patience_train': 3,
+    'save_path': 'priors/prior',
+    'save_epochs': 3,
+    'smiles_path': 'data\dataset.smi',
+    'starting_epoch': 1
+}
+TRAIN_AGENT_CONFIG_FROM_SCRATCH_AURORA = {
+    #Learning rate config
+    'prior_path': 'priors/prior.dataset',
+    'mode': 'adaptive',
+    'max_v': 5e-3, 
+    'min_v': 1e-5, 
+    'step':  1, 
+    'decay': 0.8, 
+    'sample_size': 128,
+    'patience_lr': 5, 
+    'validation': False,
+    #Trainer config
+    'epochs': 25,
     'bs': 128, 
     'early_stop': True,
     'patience_train': 5,
@@ -34,7 +54,7 @@ TRAIN_AGENT_CONFIG_FROM_SCRATCH_AURORA = {
 
 TRAIN_AGENT_CONFIG_FROM_SCRATCH_BRAF = {
     #Learning rate config
-    'prior_path': None,
+    'prior_path': 'priors/prior.dataset',
     'mode': 'adaptive',
     'max_v': 5e-3, 
     'min_v': 1e-5, 
@@ -44,7 +64,7 @@ TRAIN_AGENT_CONFIG_FROM_SCRATCH_BRAF = {
     'patience_lr': 5, 
     'validation': False,
     #Trainer config
-    'epochs': 100,
+    'epochs': 25,
     'bs': 128, 
     'early_stop': True,
     'patience_train': 5,
@@ -54,8 +74,8 @@ TRAIN_AGENT_CONFIG_FROM_SCRATCH_BRAF = {
     'starting_epoch': 1
 }
 
-REINFORCEMENT_CONFIG_AURORA_AGENT_ITS_PRODUCT = {
-    'name': 'REINFORCEMENT_CONFIG_AURORA_AGENT_ITS_PRODUCT',
+REINFORCEMENT_CONFIG_RANDOM_AGENT_ITS_PRODUCT_EXPLOITATION = {
+    'name': 'REINFORCEMENT_CONFIG_RANDOM_AGENT_ITS_PRODUCT_EXPLOITATION',
     'batch_size': 64, 
     'sigma': 128,
     'f': IdenticalTopologicalScaffold(ScaffoldParameters('ITS', 0.4, 50, 0.4)),
@@ -107,7 +127,45 @@ REINFORCEMENT_CONFIG_AURORA_AGENT_ITS_PRODUCT = {
                             ],
                             specific_parameters = None)
     ]),
-    'buffer': Buffer(128, [], 64, CustomProduct([
+    'buffer': Buffer(128,  ["OCCN1CCN(CCCN2c3ccccc3Sc3ccc(Cl)cc32)CC1",
+                            "C=CCN1CCC2c3cccc(OC)c3CCC21",
+                            "CCCN(Cc1ccc(OC)cc1)C1CCc2c(cccc2OC)C1",
+                            "N#Cc1ccc2[nH]c(CN3CCN(c4ccc(Cl)c(Cl)c4)CC3)cc2c1",
+                            "O=C(CCCN1CCN(c2ncccn2)CC1)c1ccc(F)cc1",
+                            "Cc1ccc2c(c1)C(N1CCN(C)CC1)=Nc1cccnc1N2",
+                            "COc1ccc(-c2cccc(CN3CCN(c4ncccn4)CC3)c2)cc1",
+                            "Oc1[nH]cc2ccc(OCCCCN3CCN(c4cccc5cccc(F)c45)CC3)c(Cl)c12",
+                            "CCCN1CCN(c2cccc(OC)c2)CC1",
+                            "O=C(Nc1cccc(SC(F)(F)F)c1)N1CCC(N2CCC(n3c(O)nc4c(F)cccc43)CC2)CC1",
+                            "CC1CCN(C2=Cc3cc(Cl)ccc3Cc3ccccc32)CC1",
+                            "CCCN1CCOC2Cc3c(O)cccc3CC21",
+                            "c1ccc(N2CCN(C3CCC(Nc4ncccn4)CC3)CC2)cc1",
+                            "O=S(=O)(NC1CCC(N2CCC(c3ccccc3OCC(F)(F)F)CC2)CC1)c1ccc(OC(F)F)cc1",
+                            "COc1ccccc1N1CCN(CCCCc2cc(-c3ccccc3)no2)CC1",
+                            "c1ccc(CCC2CCN(Cc3c[nH]c4ncccc34)CC2)cc1",
+                            "CC1CN(c2cccc3cc(F)ccc23)CCN1CCC1OCCc2c1sc(C(N)=O)c2Cl",
+                            "COc1ccccc1N1CCCN(CCCCNC(=O)c2cc3ccccc3o2)CC1",
+                            "O=C1CCc2ccc(OCCCCN3CCN(c4ccccc4C(F)(F)F)CC3)cc2N1",
+                            "CCCCCCCCCC(=O)N1c2ccc(Cl)cc2N=C(N2CCN(C)CC2)c2ccccc21",
+                            "O=C1N(CCN2CCC(C(F)(F)F)CC2)CCN1c1cccc(Cl)c1",
+                            "CN1CCc2cccc3c2C1Cc1cccc(-c2c(OS(=O)(=O)C(F)(F)F)cccc2OS(=O)(=O)C(F)(F)F)c1-3",
+                            "Cc1nn(C2CCN(Cc3cccc(C#N)c3)CC2)cc1-c1ccccc1",
+                            "COc1ccc(-c2cc3c(O)n(CCN4CCN(c5ccccc5Cl)CC4)c(O)nc-3n2)cc1",
+                            "OC1(c2cccc(Cl)c2Cl)CCN(Cc2c[nH]c3ccccc23)CC1",
+                            "FC(F)(F)c1ccc2c(c1)N(Cc1ccc(CNc3cccc(Oc4ccccc4)c3)cc1)c1ccccc1S2",
+                            "CCCSc1ccccc1N1CCN(CCCOc2ccc(-c3nc4ccccc4[nH]3)cc2)CC1",
+                            "O=S(=O)(NCCCCN1CCN(c2cccc(Cl)c2Cl)CC1)c1cc2ccccc2cn1",
+                            "COc1ccc(CN2CCN(CC(=O)N3c4ccccc4CC3C)CC2)cc1",
+                            "CC1Cc2ccccc2N1C(=O)CC1CCN(Cc2ccc(Cl)cc2)CC1",
+                            "CC(C)c1ccccc1N1CCN(CCCCCC(=O)NCc2ccccc2)CC1",
+                            "Cc1ncoc1-c1nnc(SCCCN2CCc3cc4nc(C5CC5)oc4cc3CC2)n1C",
+                            "O=C1CC(c2ccccc2)c2cccc(CCN3CCN(c4nsc5ccccc45)CC3)c2N1",
+                            "O=C1NCN(c2ccccc2)C12CCN(CCCOc1ccc(F)cc1)CC2",
+                            "CCON=C(CCN1CCN(c2nccs2)CC1)c1ccccc1",
+                            "Cc1ccc2c(-c3nnc(SCCCN4CCc5cc6nc(-c7cc(C)nn7C)oc6cc5CC4)n3C)cccc2n1",
+                            "CCCN(CCCCNC(=O)c1ccc(-c2ccccc2)cc1)C1Cc2cccn3ncc(c23)C1",
+                            "Cc1ccc(OCCNCCCOc2ccccc2)cc1"], 
+                     64, CustomProduct([
         ComponentParameters(component_type = "tanimoto_similarity", 
                             name = "Tanimoto similarity",        
                             weight = 1,                          
@@ -154,16 +212,16 @@ REINFORCEMENT_CONFIG_AURORA_AGENT_ITS_PRODUCT = {
                                 "[#16;!s][C;!$(C(=[O,N])[N,O])][#16;!s]"
                             ],
                             specific_parameters = None)]), 
-                            Prior().load_prior('priors\RandomPrior')),
-    'prior_path': 'priors\RandomPrior', 
-    'agent_path': 'Agents\Agent.Aurora-A_dataset',
-    'lr': 1e-5
+                            Prior().load_prior('priors\prior.dataset')),
+    'prior_path': 'priors\prior.dataset', 
+    'agent_path': 'priors\prior.dataset',
+    'lr': 1e-2
 }
-REINFORCEMENT_CONFIG_BRAF_AGENT_ITS_PRODUCT = {
-    'name': 'REINFORCEMENT_CONFIG_BRAF_AGENT_ITS_PRODUCT',
+REINFORCEMENT_CONFIG_RANDOM_AGENT_MURCKO_PRODUCT_EXPLORE_AND_EXPLOIT = {
+    'name': 'REINFORCEMENT_CONFIG_RANDOM_AGENT_MURCKO_PRODUCT_EXPLORE_AND_EXPLOIT',
     'batch_size': 64, 
     'sigma': 128,
-    'f': IdenticalTopologicalScaffold(ScaffoldParameters('ITS', 0.4, 50, 0.4)),
+    'f': ScaffoldSimilarityFilter(ScaffoldParameters('Murcko', 0.4, 50, 1.0)),
     'scoring_func': CustomProduct([
         ComponentParameters(component_type = "tanimoto_similarity", 
                             name = "Tanimoto similarity",        
@@ -212,72 +270,63 @@ REINFORCEMENT_CONFIG_BRAF_AGENT_ITS_PRODUCT = {
                             ],
                             specific_parameters = None)
     ]),
-    'buffer': Buffer(128, [], 64, CustomProduct([
+    'buffer': Buffer(128,  ["OCCN1CCN(CCCN2c3ccccc3Sc3ccc(Cl)cc32)CC1",
+                            "C=CCN1CCC2c3cccc(OC)c3CCC21",
+                            "CCCN(Cc1ccc(OC)cc1)C1CCc2c(cccc2OC)C1",
+                            "N#Cc1ccc2[nH]c(CN3CCN(c4ccc(Cl)c(Cl)c4)CC3)cc2c1",
+                            "O=C(CCCN1CCN(c2ncccn2)CC1)c1ccc(F)cc1",
+                            "Cc1ccc2c(c1)C(N1CCN(C)CC1)=Nc1cccnc1N2",
+                            "COc1ccc(-c2cccc(CN3CCN(c4ncccn4)CC3)c2)cc1",
+                            "Oc1[nH]cc2ccc(OCCCCN3CCN(c4cccc5cccc(F)c45)CC3)c(Cl)c12",
+                            "CCCN1CCN(c2cccc(OC)c2)CC1",
+                            "O=C(Nc1cccc(SC(F)(F)F)c1)N1CCC(N2CCC(n3c(O)nc4c(F)cccc43)CC2)CC1",
+                            "CC1CCN(C2=Cc3cc(Cl)ccc3Cc3ccccc32)CC1",
+                            "CCCN1CCOC2Cc3c(O)cccc3CC21",
+                            "c1ccc(N2CCN(C3CCC(Nc4ncccn4)CC3)CC2)cc1",
+                            "O=S(=O)(NC1CCC(N2CCC(c3ccccc3OCC(F)(F)F)CC2)CC1)c1ccc(OC(F)F)cc1",
+                            "COc1ccccc1N1CCN(CCCCc2cc(-c3ccccc3)no2)CC1",
+                            "c1ccc(CCC2CCN(Cc3c[nH]c4ncccc34)CC2)cc1",
+                            "CC1CN(c2cccc3cc(F)ccc23)CCN1CCC1OCCc2c1sc(C(N)=O)c2Cl",
+                            "COc1ccccc1N1CCCN(CCCCNC(=O)c2cc3ccccc3o2)CC1",
+                            "O=C1CCc2ccc(OCCCCN3CCN(c4ccccc4C(F)(F)F)CC3)cc2N1",
+                            "CCCCCCCCCC(=O)N1c2ccc(Cl)cc2N=C(N2CCN(C)CC2)c2ccccc21",
+                            "O=C1N(CCN2CCC(C(F)(F)F)CC2)CCN1c1cccc(Cl)c1",
+                            "CN1CCc2cccc3c2C1Cc1cccc(-c2c(OS(=O)(=O)C(F)(F)F)cccc2OS(=O)(=O)C(F)(F)F)c1-3",
+                            "Cc1nn(C2CCN(Cc3cccc(C#N)c3)CC2)cc1-c1ccccc1",
+                            "COc1ccc(-c2cc3c(O)n(CCN4CCN(c5ccccc5Cl)CC4)c(O)nc-3n2)cc1",
+                            "OC1(c2cccc(Cl)c2Cl)CCN(Cc2c[nH]c3ccccc23)CC1",
+                            "FC(F)(F)c1ccc2c(c1)N(Cc1ccc(CNc3cccc(Oc4ccccc4)c3)cc1)c1ccccc1S2",
+                            "CCCSc1ccccc1N1CCN(CCCOc2ccc(-c3nc4ccccc4[nH]3)cc2)CC1",
+                            "O=S(=O)(NCCCCN1CCN(c2cccc(Cl)c2Cl)CC1)c1cc2ccccc2cn1",
+                            "COc1ccc(CN2CCN(CC(=O)N3c4ccccc4CC3C)CC2)cc1",
+                            "CC1Cc2ccccc2N1C(=O)CC1CCN(Cc2ccc(Cl)cc2)CC1",
+                            "CC(C)c1ccccc1N1CCN(CCCCCC(=O)NCc2ccccc2)CC1",
+                            "Cc1ncoc1-c1nnc(SCCCN2CCc3cc4nc(C5CC5)oc4cc3CC2)n1C",
+                            "O=C1CC(c2ccccc2)c2cccc(CCN3CCN(c4nsc5ccccc45)CC3)c2N1",
+                            "O=C1NCN(c2ccccc2)C12CCN(CCCOc1ccc(F)cc1)CC2",
+                            "CCON=C(CCN1CCN(c2nccs2)CC1)c1ccccc1",
+                            "Cc1ccc2c(-c3nnc(SCCCN4CCc5cc6nc(-c7cc(C)nn7C)oc6cc5CC4)n3C)cccc2n1",
+                            "CCCN(CCCCNC(=O)c1ccc(-c2ccccc2)cc1)C1Cc2cccn3ncc(c23)C1",
+                            "Cc1ccc(OCCNCCCOc2ccccc2)cc1"], 
+                     64, CustomProduct([
         ComponentParameters(component_type = "tanimoto_similarity", 
                             name = "Tanimoto similarity",        
                             weight = 1,                          
                             model_path = None, 
-                            smarts = [],           
+                            smarts = [],                  
                             smiles = ["O=S(=O)(c3ccc(n1nc(cc1c2ccc(cc2)C)C(F)(F)F)cc3)N"], 
-                            specific_parameters = None),
-
-        ComponentParameters(component_type = "qed_score", 
-                            name = "QED",        
-                            weight = 2,           
-                            model_path = None,
-                            smiles = None,
-                            smarts = []),
-        
-        ComponentParameters(component_type = "custom_alerts",
-                            name = "Custom alerts",              
-                            weight = 1,                          
-                            model_path = None,   
-                            smiles = [],                
-                            smarts = [                            
-                                "[*;r8]",
-                                "[*;r9]",
-                                "[*;r10]",
-                                "[*;r11]",
-                                "[*;r12]",
-                                "[*;r13]",
-                                "[*;r14]",
-                                "[*;r15]",
-                                "[*;r16]",
-                                "[*;r17]",
-                                "[#8][#8]",
-                                "[#6;+]",
-                                "[#16][#16]",
-                                "[#7;!n][S;!$(S(=O)=O)]",
-                                "[#7;!n][#7;!n]",
-                                "C#C",
-                                "C(=[O,S])[O,S]",
-                                "[#7;!n][C;!$(C(=[O,N])[N,O])][#16;!s]",
-                                "[#7;!n][C;!$(C(=[O,N])[N,O])][#7;!n]",
-                                "[#7;!n][C;!$(C(=[O,N])[N,O])][#8;!o]",
-                                "[#8;!o][C;!$(C(=[O,N])[N,O])][#16;!s]",
-                                "[#8;!o][C;!$(C(=[O,N])[N,O])][#8;!o]",
-                                "[#16;!s][C;!$(C(=[O,N])[N,O])][#16;!s]"
-                            ],
                             specific_parameters = None)]), 
-                            Prior().load_prior('priors\RandomPrior')),
-    'prior_path': 'priors\RandomPrior', 
-    'agent_path': 'Agents\Agent.Aurora-A_dataset',
-    'lr': 1e-5
+                            Prior().load_prior('priors\prior.dataset')),
+    'prior_path': 'priors\prior.dataset', 
+    'agent_path': 'priors\prior.dataset',
+    'lr': 1e-2
 }
 REINFORCEMENT_CONFIG_RANDOM_AGENT_ITS_PRODUCT_EXPLORATION = {
     'name': 'REINFORCEMENT_CONFIG_RANDOM_AGENT_ITS_PRODUCT_EXPLORATION',
     'batch_size': 64, 
     'sigma': 128,
-    'f': IdenticalTopologicalScaffold(ScaffoldParameters('ITS', 0.4, 50, 0.4)),
+    'f': NoScaffoldFilter(ScaffoldParameters('NoFilter', 0.0, 1, 0.0)),
     'scoring_func': CustomProduct([
-        ComponentParameters(component_type = "tanimoto_similarity", 
-                            name = "Tanimoto similarity",        
-                            weight = 1,                          
-                            model_path = None,                   
-                            smiles = ["O=S(=O)(c3ccc(n1nc(cc1c2ccc(cc2)C)C(F)(F)F)cc3)N"],
-                            smarts = [], 
-                            specific_parameters = None),
-
         ComponentParameters(component_type = "qed_score", 
                             name = "QED",        
                             weight = 2,           
@@ -318,14 +367,6 @@ REINFORCEMENT_CONFIG_RANDOM_AGENT_ITS_PRODUCT_EXPLORATION = {
                             specific_parameters = None)
     ]),
     'buffer': Buffer(128, [], 64, CustomProduct([
-        ComponentParameters(component_type = "tanimoto_similarity", 
-                            name = "Tanimoto similarity",        
-                            weight = 1,                          
-                            model_path = None, 
-                            smarts = [],                  
-                            smiles = ["O=S(=O)(c3ccc(n1nc(cc1c2ccc(cc2)C)C(F)(F)F)cc3)N"], 
-                            specific_parameters = None),
-
         ComponentParameters(component_type = "qed_score", 
                             name = "QED",        
                             weight = 2,           
@@ -364,8 +405,8 @@ REINFORCEMENT_CONFIG_RANDOM_AGENT_ITS_PRODUCT_EXPLORATION = {
                                 "[#16;!s][C;!$(C(=[O,N])[N,O])][#16;!s]"
                             ],
                             specific_parameters = None)]), 
-                            Prior().load_prior('priors\RandomPrior')),
-    'prior_path': 'priors\RandomPrior', 
-    'agent_path': 'priors\RandomPrior', 
+                            Prior().load_prior('priors\prior.dataset')),
+    'prior_path': 'priors\prior.dataset', 
+    'agent_path': 'priors\prior.dataset', 
     'lr': 1e-5
 }

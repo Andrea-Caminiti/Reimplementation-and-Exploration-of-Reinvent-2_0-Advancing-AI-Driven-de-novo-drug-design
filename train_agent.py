@@ -3,12 +3,10 @@ from Prior.trainer import LearningRate, Trainer
 from Prior.model import Prior
 from configurations import TRAIN_AGENT_CONFIG_FROM_SCRATCH_AURORA as Auro
 from configurations import TRAIN_AGENT_CONFIG_FROM_SCRATCH_BRAF as Braf
+from configurations import TRAIN_AGENT_CONFIG_FROM_SCRATCH as general
 import torch
 if __name__ == '__main__':
-
-    print('CUDA' if torch.cuda.is_available() else 'CPU')
-    
-    agent = Prior(use_cuda=True)
+    agent = Prior(use_cuda=True).load_prior('priors/prior.dataset')
 
     lr = LearningRate(prior=agent, 
                       prior_path=Auro['prior_path'],
@@ -36,7 +34,8 @@ if __name__ == '__main__':
     
     trainer.train()
 
-    agent = Prior(use_cuda=True)
+    
+    agent = Prior(use_cuda=True).load_prior('priors/prior.dataset')
 
     lr = LearningRate(prior=agent, 
                       prior_path=Braf['prior_path'],
@@ -52,7 +51,6 @@ if __name__ == '__main__':
     trainer = Trainer(epochs=Braf['epochs'],
                       lr=lr,
                       bs=Braf['bs'],
-                      early_stop=Braf['early_stop'],
                       early_stop=Braf['early_stop'],
                       patience=Braf['patience_train'],
                       save_path=Braf['save_path'],

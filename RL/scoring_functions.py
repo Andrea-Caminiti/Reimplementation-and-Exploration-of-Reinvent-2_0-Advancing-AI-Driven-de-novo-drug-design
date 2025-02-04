@@ -54,6 +54,12 @@ class ScoringFunction():
             if self.is_penalty(component):
                 penalty *= component.total_score
         
+        #Penalize invalid molecules
+        mols = [rk.MolFromSmiles(smile) for smile in smiles]
+        invalid = [1 if mol is None else 0 for mol in mols]
+        percentage = np.sum(invalid)/len(smiles)
+        penalty *= percentage * 10_000 
+        
         return penalty
     
     def final_score(self, smiles: List[str]):
@@ -68,7 +74,7 @@ class ScoringFunction():
         non_penalty = self.non_penalty(summaries, smiles)
         final_score = penalty * non_penalty
 
-        return ScoreSummary(np.array(final_score, dtype=np.float32), smiles, indexes)
+        return ScoreSummary(np.array(final_score, dtype=np.float32), smiles, indexes, summaries)
     
 class CustomProduct(ScoringFunction):
 

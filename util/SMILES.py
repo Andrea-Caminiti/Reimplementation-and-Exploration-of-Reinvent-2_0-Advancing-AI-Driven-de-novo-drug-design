@@ -33,6 +33,8 @@ def vocabulary_from_SMILES(path: str | List[str]):
         if type(path) == list:
             for p in path: 
                 SMILES_array += readSMILES(p)
+        else:
+            SMILES_array = readSMILES(path)
         tokenizer = Tokenizer()
         for i, s in enumerate(SMILES_array):
             SMILES_array[i] = tokenizer.tokenize(s)
@@ -41,7 +43,6 @@ def vocabulary_from_SMILES(path: str | List[str]):
         res = set()
         for se in s:
             res = res.union(se)
-        #print(res)
         res = sorted(res)
         if '^' in res:
             res.remove('^')
@@ -49,11 +50,10 @@ def vocabulary_from_SMILES(path: str | List[str]):
             res.remove('$')
         for s in res:
             vocabulary.add(s)
-        
         return vocabulary
 
 if __name__ == '__main__':
-    print(len(readSMILES('data\Aurora-A_dataset.smi')))
+    pass
 
 
 

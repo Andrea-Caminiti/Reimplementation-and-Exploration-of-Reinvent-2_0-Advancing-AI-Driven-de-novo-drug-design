@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from typing import List
 import rdkit.Chem as rk
 from torch import FloatTensor
@@ -16,7 +17,7 @@ class Buffer():
         self.scoring_func = scoring_func
         self.prior = prior
 
-        self.memory = pd.DataFrame(columns=['smile', 'score', 'likelihood'])
+        self.memory = pd.DataFrame(columns=['smiles', 'score', 'likelihood'])
         if len(self.smiles) > 0:
             rk_smiles = [rk.MolToSmiles(rk.MolFromSmiles(smile, sanitize=False), isomericSmiles=False) for smile in self.smiles]
             rk_smiles = [smile for smile in rk_smiles if smile != None]
@@ -27,17 +28,23 @@ class Buffer():
             score = scoring_func.final_score(smiles)
             likelihood = prior.likelihood_smiles(smiles)
             df = pd.DataFrame({"smiles": smiles, "score": score.total_score, "likelihood": -likelihood.detach().cpu().numpy()})
-            self.memory = self.memory.append(df)
+            self.memory = self.memory._append(df)
             self.purge()
 
     def purge(self):
         df = self.memory.drop_duplicates(subset=['smiles'])
-        df.sort_values(by='score', inplace=True, ascending=False)
+        df.reset_index(drop=True, inplace=True)
+        mols = [rk.MolFromSmiles(smile) for smile in df['smiles']]
+        valid = np.array([0 if mol is None else 1 for mol in mols])
+        invalid_indexes = np.where(valid == 0)
+        df.drop(invalid_indexes[0])
+        df = df.sort_values(by='score', ascending=False)
+        df.reset_index(drop=True, inplace=True)
         self.memory = df.iloc[:self.size]
     
     def add(self, smiles: List[str], score: List[float], neg_likelihood: FloatTensor):
         # NOTE: likelihood should be already negative
-        df = pd.DataFrame({"smiles": smiles, "score": score.cpu().numpy(), "likelihood": neg_likelihood.detach().cpu().numpy()})
+        df = pd.DataFrame({"smiles": smiles, "score": score.detach().cpu().numpy(), "likelihood": neg_likelihood.detach().cpu().numpy()})
         self.memory = self.memory._append(df)
         self.purge()
 

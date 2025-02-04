@@ -1,0 +1,32 @@
+Starting a 100 steps run
+End of the run
+Summary:
+Average Agent Likelihood: -36.9822998046875
+Average Prior Likelihood: -57.09931564331055
+Average Augmented Loss: 336097411072.0
+Average Score: 546.7288818359375
+Average Valid Smiles: 0.181875
+
+
+Starting a 100 steps run
+End of the run
+Summary:
+Average Agent Likelihood: -38.28953552246094
+Average Prior Likelihood: -58.034908294677734
+Average Augmented Loss: 338693488640.0
+Average Score: 544.50439453125
+Average Valid Smiles: 0.17984375
+
+
+Starting a 10000 steps run
+Starting a 10000 steps run
+Starting a 10000 steps run
+End of the run
+Summary:
+Average Agent Likelihood: -24.22184181213379
+Average Prior Likelihood: -34.73618698120117
+Average Augmented Loss: 505870581760.0
+Average Score: 876.885498046875
+Average Valid Smiles: 0.4406355158730159
+
+

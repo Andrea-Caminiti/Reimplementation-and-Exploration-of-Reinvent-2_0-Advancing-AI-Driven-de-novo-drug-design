@@ -33,7 +33,7 @@ class LearningRate:
         :param sample_size: (int) (optional) amount of SMILES to sample
         :param patience: (int) (optional) how many epoch before applying decay with adaptive scheduler
         '''
-        assert (prior != None or prior_path != None) and not (prior and prior_path)
+        assert (prior != None or prior_path != None)
 
         self.mode = mode.lower()
         self.value = max_v
@@ -50,8 +50,9 @@ class LearningRate:
 
         if prior_path: 
             self.prior = Prior().load_prior(prior_path)
+            self.prior.Rnn = self.prior.Rnn.cuda()
         
-        self.optimizer = torch.optim.Adam(self.prior.network.parameters(), lr = self.max_value)
+        self.optimizer = torch.optim.Adam(self.prior.Rnn.parameters(), lr = self.max_value)
 
         self.scheduler = None
 
@@ -95,7 +96,6 @@ class LearningRate:
                 num_dists = len(dists)
                 avg_dist = np.sum(dists, axis=0) / num_dists
                 return np.sum([sps.entropy(dist, avg_dist) for dist in dists]) / num_dists
-        
         _, sampled_nlls = self.prior.sample_smiles(num=self.sample_size)
         if self.validation:
             training_nlls, valid_nlls = self._nlls(smiles_path, self.validation)
@@ -142,7 +142,6 @@ class LearningRate:
             train = create_dataloader(path, self.prior.vocabulary, self.prior.tokenizer)
             train_nll = []
             for batch in train:
-                batch = batch.to(device='cuda')
                 train_nll.append(self.prior.likelihood(batch))
             
             return pad(torch.concatenate(train_nll).cpu().detach().numpy())
@@ -176,7 +175,7 @@ class Trainer:
         One between prior and prior_path must be given! \n
         '''
         
-        assert (prior != None or prior_path != None) and not (prior and prior_path)
+        assert (prior != None or prior_path != None)
         assert (not early_stop and not patience) or (early_stop and patience != None)
 
         self.epochs = epochs
@@ -195,6 +194,7 @@ class Trainer:
         self.prior = prior
         if prior_path:
             self.prior = Prior().load_prior(prior_path)
+            self.prior.Rnn = self.prior.Rnn.to('cuda')
         
         self.starting_epoch = max(starting_epoch, 1)
 
@@ -224,10 +224,7 @@ class Trainer:
         train_d_loader = create_dataloader(self.smiles_path, self.prior.vocabulary, batch_size=self.batch_size)
         ls = [] # losses for every batch
         for batch in tqdm(train_d_loader, total=len(train_d_loader), desc=f'Epoch {epoch}', leave=False):
-            batch = batch.long()
-            if self.prior.use_cuda:
-                batch = batch.to('cuda')
-            #print(batch.size())
+            batch = batch.long().cuda()
             loss = self.prior.likelihood(batch).mean()
             self.scheduler.optimizer.zero_grad()
             loss.backward()

@@ -10,7 +10,8 @@ class Component:
 
 class ScoreSummary():
     def __init__(self, total_score: np.array, smiles: List[str], 
-                 valid_indexes: List[int]):
+                 valid_indexes: List[int], components: List[Component]):
         self.total_score = total_score
         self.smiles = smiles
         self.valid_indexes = valid_indexes
+        self.components = components

@@ -53,4 +53,4 @@ def create_dataloader(path: str, vocabulary: Vocabulary, tokenizer: Tokenizer = 
         val_dataloader = DataLoader(dset.val, batch_size=batch_size)
 
         return train_dataloader, val_dataloader
-    return DataLoader(dset.SMILES_array)
+    return DataLoader(dset.SMILES_array, batch_size=batch_size)

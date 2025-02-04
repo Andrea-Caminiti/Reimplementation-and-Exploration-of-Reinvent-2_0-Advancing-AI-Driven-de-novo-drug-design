@@ -18,7 +18,7 @@ class RNN(nn.Module):
     '''
 
     def __init__(self, vocab_size:int, embedding_dim: int = 256, 
-                 cell_type: str = 'lstm', num_layers: int = 5, layer_size: int = 512, dropout: float = 0.2
+                 cell_type: str = 'lstm', num_layers: int = 3, layer_size: int = 256, dropout: float = 0.2
                 ):
         '''
         Params:
@@ -61,7 +61,7 @@ class RNN(nn.Module):
             match self.cell_type:
                 case 'lstm': hidden = [torch.zeros(*size).to(device='cuda'), torch.zeros(*size).to(device='cuda')]
                 case 'gru': hidden = torch.zeros(*size).to(device='cuda')
-        emb = self.embedding(x.to('cuda'))
+        emb = self.embedding(x)
         
         res, hidden_state = self.Rnn(emb, hidden)
         del emb, hidden
@@ -108,7 +108,7 @@ class Prior:
 
     def __init__(self, vocabulary: vc.Vocabulary = vc.Vocabulary(), tokenizer: vc.Tokenizer = vc.Tokenizer(), 
                 network_type:str = 'rnn', network_params: Mapping = None, max_seq_length: int = 256,
-                smiles_paths: str = ['data\Aurora-A_dataset.smi', 'data\B-raf_dataset.smi'],  
+                smiles_paths: str = 'data\dataset.smi',  
                 use_cuda: bool = False ):
         '''
         Generative model to create new SMILES strings
@@ -188,7 +188,7 @@ class Prior:
         )
 
         model.Rnn.load_state_dict(params["network"])
-        
+        model.Rnn = model.Rnn.cuda()
         return model
 
     def likelihood(self, sequences: List):
@@ -198,11 +198,10 @@ class Prior:
         :param sequences: (torch.Tensor) A batch of sequences
         :return:  (torch.Tensor) Log likelihood for each example.
         """
-        #print(sequences[:, :-1].size())
         logits, _ = self.Rnn(sequences[:, :-1])
         log_probs = logits.log_softmax(dim=2)
         del logits
-        return self.loss(log_probs.transpose(1, 2), sequences[:, 1:].long().to('cuda')).sum(dim=1)
+        return self.loss(log_probs.transpose(1, 2), sequences[:, 1:].long()).sum(dim=1)
     
     def likelihood_smiles(self, smiles: List):
         '''
@@ -225,7 +224,7 @@ class Prior:
                 collated_arr[i, :seq.size(0)] = seq
             return collated_arr
 
-        padded_sequences = collate_fn(sequences)
+        padded_sequences = collate_fn(sequences).cuda()
         return self.likelihood(padded_sequences)
 
     def sample_smiles(self, num: int = 128, batch_size: int = 128):
@@ -269,10 +268,10 @@ class Prior:
         neg_log_like = torch.zeros(batch_size).to(device='cuda')
 
         for _ in tqdm(range(self.max_seq_length - 1), desc='Sampling...', leave=False):
-            logits, hidden_state = self.Rnn(in_vector.unsqueeze(1).to('cuda'), hidden_state)
+            logits, hidden_state = self.Rnn(in_vector.unsqueeze(1), hidden_state)
             logits = logits.squeeze(1)
-            probabilities = logits.softmax(dim=1).to(device='cuda')
-            log_probs = logits.log_softmax(dim=1).to(device='cuda')
+            probabilities = logits.softmax(dim=1)
+            log_probs = logits.log_softmax(dim=1)
             del logits
             in_vector = torch.multinomial(probabilities, 1).view(-1).to(device='cuda')
             sequences.append(in_vector.view(-1, 1))
@@ -280,7 +279,6 @@ class Prior:
             del log_probs, probabilities
             if in_vector.sum() == 0:
                 break
-
         sequences = torch.cat(sequences, 1)
         return sequences.data, neg_log_like
 
