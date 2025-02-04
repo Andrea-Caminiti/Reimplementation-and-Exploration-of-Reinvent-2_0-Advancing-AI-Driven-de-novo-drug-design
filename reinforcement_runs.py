@@ -87,9 +87,9 @@ if __name__ == '__main__':
                              Explo['scoring_func'], Explo['buffer'], Explo['prior_path'],
                              Explo['agent_path'], Explo['lr'])
     
-    #run(R_Exploit, 10_000, 'csvs', Exploit['name'])
-    #run(R_Murcko, 10_000, 'csvs', Murcko['name'])
-    run(R_Explo, 10_000, 'csvs', Explo['name'])
+    run(R_Exploit, 200, 'csvs', Exploit['name'])
+    run(R_Murcko, 200, 'csvs', Murcko['name'])
+    run(R_Explo, 200, 'csvs', Explo['name'])
     
     plots('csvs', Exploit['name'])
     plots('csvs', Murcko['name'])

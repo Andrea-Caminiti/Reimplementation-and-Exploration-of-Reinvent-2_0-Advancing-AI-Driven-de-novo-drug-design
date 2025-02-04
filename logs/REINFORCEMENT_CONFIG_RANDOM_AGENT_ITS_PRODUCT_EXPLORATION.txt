@@ -30,3 +30,13 @@ Average Score: 876.885498046875
 Average Valid Smiles: 0.4406355158730159
 
 
+Starting a 200 steps run
+End of the run
+Summary:
+Average Agent Likelihood: -36.37252426147461
+Average Prior Likelihood: -56.40964889526367
+Average Augmented Loss: 396207620096.0
+Average Score: 602.0706176757812
+Average Valid Smiles: 0.189765625
+
+
