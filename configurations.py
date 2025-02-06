@@ -5,7 +5,7 @@ from RL.score_components import TanimotoSimilarity, JaccardDistance, \
                                  CustomAlerts, QEDScore, \
                                  MatchingSubstructure, \
                                  MolWeight, PSA, \
-                                 RotatableBonds, HBD_Lipinski, \
+                                 RotatableBonds, HBD, \
                                  NumRings
 from RL.buffer import Buffer
 from Prior.model import Prior

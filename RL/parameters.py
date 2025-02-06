@@ -1,6 +1,9 @@
 from typing import List
 
 class ScaffoldParameters():
+    '''
+    Class to collect scaffold parameters
+    '''
     def __init__(self, name: str, minscore: float, nbmax: int, minsimilarity: float):
         self.name = name
         self.minscore = minscore
@@ -9,6 +12,9 @@ class ScaffoldParameters():
 
 
 class ComponentParameters():
+    '''
+    Class to collect component parameters
+    '''
     def __init__(self, component_type: str, name: str, weight: float,
                 smiles: List[str], smarts: List[str], model_path: str, 
                 specific_parameters: dict = None):

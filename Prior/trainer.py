@@ -9,6 +9,8 @@ from os.path import basename
 from Prior.model import Prior
 from util.dataset import create_dataloader
 
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 class LearningRate:
     '''
     Class to manipulate learning rate
@@ -50,7 +52,7 @@ class LearningRate:
 
         if prior_path: 
             self.prior = Prior().load_prior(prior_path)
-            self.prior.Rnn = self.prior.Rnn.cuda()
+            self.prior.Rnn = self.prior.Rnn.to(device)
         
         self.optimizer = torch.optim.Adam(self.prior.Rnn.parameters(), lr = self.max_value)
 
@@ -194,7 +196,7 @@ class Trainer:
         self.prior = prior
         if prior_path:
             self.prior = Prior().load_prior(prior_path)
-            self.prior.Rnn = self.prior.Rnn.to('cuda')
+            self.prior.Rnn = self.prior.Rnn.to(device)
         
         self.starting_epoch = max(starting_epoch, 1)
 
@@ -224,7 +226,7 @@ class Trainer:
         train_d_loader = create_dataloader(self.smiles_path, self.prior.vocabulary, batch_size=self.batch_size)
         ls = [] # losses for every batch
         for batch in tqdm(train_d_loader, total=len(train_d_loader), desc=f'Epoch {epoch}', leave=False):
-            batch = batch.long().cuda()
+            batch = batch.long().to(device)
             loss = self.prior.likelihood(batch).mean()
             self.scheduler.optimizer.zero_grad()
             loss.backward()

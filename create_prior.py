@@ -11,6 +11,7 @@ import torch
 import scipy.stats as sps
 import gc
 
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def readSMILES(path: str, i: int):
     '''
@@ -88,7 +89,7 @@ class SMILESDataset(Dataset):
         
         self.SMILES_array = list(map(vocabulary.encode_sequence, self.SMILES_array))
         self.SMILES_array = pad(self.SMILES_array)
-        self.SMILES_array = torch.LongTensor(self.SMILES_array).to('cuda')
+        self.SMILES_array = torch.LongTensor(self.SMILES_array).to(device)
             
         self.train = self.SMILES_array[:int(0.66 * len(self.SMILES_array))]
         self.val = self.SMILES_array[int(0.66 * len(self.SMILES_array)):]
@@ -178,7 +179,7 @@ class Trainer:
         self.prior = prior
         if prior_path:
             self.prior = Prior().load_prior(prior_path)
-            self.prior.Rnn = self.prior.Rnn.cuda()
+            self.prior.Rnn = self.prior.Rnn.to(device)
         
         self.starting_epoch = max(starting_epoch, 1)
 

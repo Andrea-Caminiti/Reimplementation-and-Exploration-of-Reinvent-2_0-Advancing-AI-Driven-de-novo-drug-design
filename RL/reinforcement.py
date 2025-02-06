@@ -12,7 +12,12 @@ from RL.filters import ScaffoldFilter
 from RL.scoring_functions import ScoringFunction
 from RL.buffer import Buffer
 
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 class Reinforcement:
+    '''
+    Class to start and manage reinforment learning runs
+    '''
     def __init__(self,
                  batch_size: int, sigma: int,
                  filter: ScaffoldFilter, scoring_func: ScoringFunction,
@@ -25,8 +30,8 @@ class Reinforcement:
         self.prior = Prior().load_prior(prior_path)
         self.agent = Prior().load_prior(agent_path)
         
-        self.agent.Rnn.to('cuda')
-        self.prior.Rnn.to('cuda')
+        self.agent.Rnn.to(device)
+        self.prior.Rnn.to(device)
 
         self.agent_path = agent_path
         self.prior_path = prior_path
@@ -47,10 +52,21 @@ class Reinforcement:
         self.sigma = sigma
 
     def freeze_prior(self):
+        '''
+        Method to freeze prior parameters so that they are not updated
+        '''
         for param in self.prior.Rnn.parameters():
             param.requires_grad = False
     
     def run(self, steps: int, out_file: TextIOWrapper, csv_folder_path: str, name: str):
+        '''
+        Starts a run
+        Params:
+        :param steps: (int) number of reinforcement learning steps
+        :param outfile: (TextIOWrapper) Writable open file
+        :param csv_folder_path: (str) path to the folder where to store buffer and stats to plot
+        :param name: (str) name of the run
+        '''
         out_file.write(f'Starting a {steps} steps run\n')
         self.freeze_prior()
         a_likelihoods = []
@@ -71,7 +87,7 @@ class Reinforcement:
             score = torch.from_numpy(score)
             score = torch.autograd.Variable(score)
             if torch.cuda.is_available():
-                score = score.cuda()
+                score = score.to(device)
             loss = self.augment_loss(p_likelihood, a_likelihood, score)
             loss, a_likelihood = self.buffer_filter(self.agent, loss, a_likelihood, p_likelihood, smiles, score)
 
@@ -111,12 +127,15 @@ class Reinforcement:
                 score = torch.from_numpy(score)
 
             augmented = prior_likelihood + self.sigma * score
-            return torch.pow((augmented.to('cuda') - agent_likelihood.to('cuda')), 2)
+            return torch.pow((augmented.to(device) - agent_likelihood.to(device)), 2)
     
     def buffer_filter(self, agent: Prior, loss: torch.FloatTensor,
                       agent_likelihood: torch.FloatTensor, 
                       prior_likelihood: torch.FloatTensor,
                       smiles: List[str], score: torch.FloatTensor):
+        '''
+        Manage buffer sampling and scoring with current agent
+        '''
         if self.buffer != None:
             exp_smiles, exp_scores, exp_prior_likelihood = self.buffer.sample()
             if len(exp_smiles) > 0:

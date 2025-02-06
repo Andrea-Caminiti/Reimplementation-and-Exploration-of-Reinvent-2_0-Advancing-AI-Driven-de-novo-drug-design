@@ -10,7 +10,9 @@ from RL.parameters import ComponentParameters
 from RL.summaries import Component
 
 class ScoreComponent():
-
+    '''
+    Parent Class of all components
+    '''
     def __init__(self, parameters: ComponentParameters):
         self.parameters = parameters
 
@@ -35,6 +37,10 @@ class ScoreComponent():
         return valid_mols, valid_idxs
     
 class CustomAlerts(ScoreComponent):
+    '''
+    Penalty Component, requires a set of SMARTS strings to look for in the generated SMILES.
+    If found returns 0.
+    '''
     def __init__(self, parameters: ComponentParameters):
         super().__init__(parameters)
         if len(self.parameters.smarts) > 0:
@@ -54,6 +60,10 @@ class CustomAlerts(ScoreComponent):
         return 1 - m
     
 class JaccardDistance(ScoreComponent):
+    '''
+    Non penalty component. Requires a set of SMILES strings to return
+    the lowest distance score to.
+    '''
     def __init__(self, parameters: ComponentParameters):
         super().__init__(parameters) 
         self.fingerprints, self.indexes = self.smiles_to_fingerprints(self.parameters.smiles)
@@ -79,6 +89,10 @@ class JaccardDistance(ScoreComponent):
         return np.array(score, dtype=np.int32)
     
 class MatchingSubstructure(ScoreComponent):
+    '''
+    Penalty component. Requires a set of SMARTS strings to check for 
+    similar substructure. Returns 1 if found. 
+    '''
     def __init__(self, parameters: ComponentParameters):
         super().__init__(parameters)
 
@@ -96,7 +110,10 @@ class MatchingSubstructure(ScoreComponent):
         return 0.5 * (1 + np.array(m))
 
 class QEDScore(ScoreComponent):
-    
+    '''
+    Non penalty component.
+    Computes the quantitative estimation of drug-likeness score
+    '''
     def __init__(self, parameters: ComponentParameters):
         super().__init__(parameters)
     
@@ -114,6 +131,9 @@ class QEDScore(ScoreComponent):
         return Component(score, self.parameters)
     
 class TanimotoSimilarity(ScoreComponent):
+    ''' 
+    Non penalty component.
+    Requires a set of SMILES and returns the highest similarity score to it'''
     def __init__(self, parameters: ComponentParameters):
         super().__init__(parameters)
         self.fingerprints, self.indexes = self.smiles_to_fingerprints(self.parameters.smiles)
@@ -215,6 +235,9 @@ class TransformationFactory():
         return np.array(transformed, dtype=np.float32)
 
 class PhysChemComponent(ScoreComponent):
+    '''
+    Base class for the Physical-Chimical component
+    '''
     def __init__(self, parameters: ComponentParameters):
         super().__init__(parameters)
         self.transformation_function = self.transformation(self.parameters.parameters)
@@ -243,7 +266,10 @@ class PhysChemComponent(ScoreComponent):
             transform_function = factory.no_transformation
         return transform_function
 
-class HBD_Lipinski(PhysChemComponent):
+class HBD(PhysChemComponent):
+    '''
+    Non penalty component. Computes the number of hydrogen bond donors
+    '''
     def __init__(self, parameters: ComponentParameters):
         super().__init__(parameters)
 
@@ -251,6 +277,9 @@ class HBD_Lipinski(PhysChemComponent):
         return NumHDonors(mol)
     
 class MolWeight(PhysChemComponent):
+    ''' 
+    Non penalty component.
+    Computes molecular weight'''
     def __init__(self, parameters: ComponentParameters):
         super().__init__(parameters)
 
@@ -258,6 +287,10 @@ class MolWeight(PhysChemComponent):
         return MolWt(mol)
 
 class NumRings(PhysChemComponent):
+    '''
+    Non penalty component.
+    Computes the number of rings in the molecule
+    '''
     def __init__(self, parameters: ComponentParameters):
         super().__init__(parameters)
 
@@ -265,6 +298,10 @@ class NumRings(PhysChemComponent):
         return CalcNumRings(mol)
 
 class RotatableBonds(PhysChemComponent):
+    ''' 
+    Non penalty component.
+    Computes the number of rotatable bonds
+    '''
     def __init__(self, parameters: ComponentParameters):
         super().__init__(parameters)
 
@@ -272,6 +309,9 @@ class RotatableBonds(PhysChemComponent):
         return NumRotatableBonds(mol)
     
 class PSA(PhysChemComponent):
+    '''
+    Non penalty component. 
+    Computes molecule polarity '''
     def __init__(self, parameters: ComponentParameters):
         super().__init__(parameters)
 

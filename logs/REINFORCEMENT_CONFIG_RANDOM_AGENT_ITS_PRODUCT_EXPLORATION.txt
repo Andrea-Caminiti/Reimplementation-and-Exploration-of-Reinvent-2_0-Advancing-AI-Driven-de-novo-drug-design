@@ -19,8 +19,6 @@ Average Valid Smiles: 0.17984375
 
 
 Starting a 10000 steps run
-Starting a 10000 steps run
-Starting a 10000 steps run
 End of the run
 Summary:
 Average Agent Likelihood: -24.22184181213379

@@ -9,7 +9,7 @@ from RL.score_components import TanimotoSimilarity, JaccardDistance, \
                                  CustomAlerts, QEDScore, \
                                  MatchingSubstructure, \
                                  MolWeight, PSA, \
-                                 RotatableBonds, HBD_Lipinski, \
+                                 RotatableBonds, HBD, \
                                  NumRings
 
 COMPONENTS = {
@@ -21,7 +21,7 @@ COMPONENTS = {
             'molecular_weight': MolWeight,
             'tpsa': PSA,
             'num_rotatable_bonds': RotatableBonds,
-            'num_hbd_lipinski': HBD_Lipinski,
+            'num_hbd': HBD,
             'num_rings': NumRings,
         }
 
@@ -35,19 +35,29 @@ def total_score(summary: Component, query_length: int, valid_indices: List[int])
 
 #Abstract class
 class ScoringFunction():
+    '''
+    Base Class for each scoring function
+    '''
     def __init__(self, parameters: List[ComponentParameters]):
 
         self.parameters = parameters
         self.components = [COMPONENTS.get(p.component_type)(p) for p in self.parameters]
 
     def non_penalty(self, components: List[Component], smiles: List[str]):
+        '''Computes the non penaly score'''
         pass
 
     def is_penalty(self, summary: Component):
+        '''
+        Returns true if the component is a penalty component'''
         return (summary.parameters.component_type == 'matching_substructure') or (
                 summary.parameters.component_type == 'custom_alerts')
     
     def penalty(self, components: List[Component], smiles: List[str]):
+        '''
+        Computes the penalty if penalty components are presented. 
+        It also penalizes the percentage of NON valid SMILES generated 
+        '''
         penalty = np.ones(len(smiles), dtype=np.float32)
 
         for component in components:
@@ -63,7 +73,9 @@ class ScoringFunction():
         return penalty
     
     def final_score(self, smiles: List[str]):
-        
+        '''
+        Computes the actual score
+        '''
         mols = [rk.MolFromSmiles(smile) for smile in smiles]
         valid = [0 if mol is None else 1 for mol in mols]
         indexes = [index for index, boolean in enumerate(valid) if boolean]
@@ -77,7 +89,9 @@ class ScoringFunction():
         return ScoreSummary(np.array(final_score, dtype=np.float32), smiles, indexes, summaries)
     
 class CustomProduct(ScoringFunction):
-
+    '''
+    Weighted Product Scoring FUnction
+    '''
     def __init__(self, parameters: List[ComponentParameters]):
         super().__init__(parameters)
 
@@ -105,7 +119,9 @@ class CustomProduct(ScoringFunction):
         return product
 
 class CustomSum(ScoringFunction):
-
+    '''
+    Weighted Sum Scoring Function
+    '''
     def __init__(self, parameters: List[ComponentParameters]):
         super().__init__(parameters)
 

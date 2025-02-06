@@ -11,6 +11,8 @@ from tqdm import tqdm
 from Vocabulary import vocabulary as vc 
 from util.SMILES import vocabulary_from_SMILES
 
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 class RNN(nn.Module):
     '''
     RNN class to create the base for the model "Prior" that will have 
@@ -59,8 +61,8 @@ class RNN(nn.Module):
         if not hidden: 
             size = (self.num_layers, batch_size, self.layer_size)
             match self.cell_type:
-                case 'lstm': hidden = [torch.zeros(*size).to(device='cuda'), torch.zeros(*size).to(device='cuda')]
-                case 'gru': hidden = torch.zeros(*size).to(device='cuda')
+                case 'lstm': hidden = [torch.zeros(*size).to(device=device), torch.zeros(*size).to(device=device)]
+                case 'gru': hidden = torch.zeros(*size).to(device=device)
         emb = self.embedding(x)
         
         res, hidden_state = self.Rnn(emb, hidden)
@@ -145,7 +147,7 @@ class Prior:
             self.Rnn = Transformer(self.vocab_length, **self.network_params)
         
         if self.use_cuda:
-            self.Rnn.to('cuda')
+            self.Rnn.to(device)
 
         self.loss = nn.NLLLoss(reduction='none')
 
@@ -188,7 +190,7 @@ class Prior:
         )
 
         model.Rnn.load_state_dict(params["network"])
-        model.Rnn = model.Rnn.cuda()
+        model.Rnn = model.Rnn.to(device)
         return model
 
     def likelihood(self, sequences: List):
@@ -224,7 +226,7 @@ class Prior:
                 collated_arr[i, :seq.size(0)] = seq
             return collated_arr
 
-        padded_sequences = collate_fn(sequences).cuda()
+        padded_sequences = collate_fn(sequences).to(device)
         return self.likelihood(padded_sequences)
 
     def sample_smiles(self, num: int = 128, batch_size: int = 128):
@@ -262,10 +264,10 @@ class Prior:
         :param batch_size: how many SMILES string to sample
         '''
         #Start with vocabulary('^') filled arrays
-        in_vector = torch.ones(batch_size, dtype=torch.long, device='cuda')
-        sequences = [torch.ones([batch_size, 1], dtype=torch.long, device='cuda')]
+        in_vector = torch.ones(batch_size, dtype=torch.long, device=device)
+        sequences = [torch.ones([batch_size, 1], dtype=torch.long, device=device)]
         hidden_state = None
-        neg_log_like = torch.zeros(batch_size).to(device='cuda')
+        neg_log_like = torch.zeros(batch_size).to(device)
 
         for _ in tqdm(range(self.max_seq_length - 1), desc='Sampling...', leave=False):
             logits, hidden_state = self.Rnn(in_vector.unsqueeze(1), hidden_state)
@@ -273,7 +275,7 @@ class Prior:
             probabilities = logits.softmax(dim=1)
             log_probs = logits.log_softmax(dim=1)
             del logits
-            in_vector = torch.multinomial(probabilities, 1).view(-1).to(device='cuda')
+            in_vector = torch.multinomial(probabilities, 1).view(-1).to(device)
             sequences.append(in_vector.view(-1, 1))
             neg_log_like += self.loss(log_probs, in_vector)
             del log_probs, probabilities
